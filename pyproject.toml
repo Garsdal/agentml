@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentml"
+version = "0.1.0"
+description = "AgentML — AI-powered experiment orchestration"
+requires-python = ">=3.13"
+dependencies = [
+    "typer>=0.15",
+    "rich>=13.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "pyyaml>=6.0",
+    "httpx>=0.28",
+    "structlog>=24.0",
+    "python-ulid>=3.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.80"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "ruff>=0.11",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+agentml = "agentml.cli.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
