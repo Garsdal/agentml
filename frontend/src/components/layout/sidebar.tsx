@@ -1,8 +1,11 @@
 import { NavLink } from "react-router-dom";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [{ to: "/", label: "Domains", icon: LayoutGrid }];
+const navItems = [
+  { to: "/", label: "Domains", icon: LayoutGrid },
+  { to: "/knowledge", label: "Knowledge", icon: Brain },
+];
 
 export function Sidebar() {
   return (

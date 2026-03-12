@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDomain, updateDomain } from "@/hooks/use-domain";
 import { useDomainExperiments } from "@/hooks/use-domain-experiments";
@@ -11,12 +12,16 @@ import { ExperimentsSection } from "@/components/domains/experiments-section";
 import { KnowledgeSection } from "@/components/domains/knowledge-section";
 import { ToolsSection } from "@/components/domains/tools-section";
 import { AgentSection } from "@/components/domains/agent-section";
+import { DomainDashboard } from "@/components/domains/domain-dashboard";
 import { MetricEvolutionChart } from "@/components/charts/metric-evolution-chart";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { cn } from "@/lib/utils";
 import {
   PauseCircle,
   PlayCircle,
   CheckCircle,
   Archive,
+  LayoutDashboard,
   Bot,
   FlaskConical,
   Brain,
@@ -31,6 +36,13 @@ export default function DomainDetailPage() {
   const { data: experiments, isLoading: expLoading } = useDomainExperiments(id);
   const { data: knowledge, isLoading: knLoading } = useDomainKnowledge(id);
   const { data: metrics, isLoading: metLoading } = useDomainMetrics(id);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [highlightExpId, setHighlightExpId] = useState<string | undefined>(undefined);
+
+  const handleExperimentClick = (experimentId: string) => {
+    setHighlightExpId(experimentId);
+    setActiveTab("experiments");
+  };
 
   if (isLoading) {
     return <p className="text-sm text-grey">Loading domain…</p>;
@@ -106,14 +118,19 @@ export default function DomainDetailPage() {
       {/* Stat strip */}
       <div className="flex items-center gap-0 bg-wheat/10 rounded-xl overflow-hidden border border-soft-fawn/20">
         {[
-          { label: "Experiments", value: domain.experiment_ids.length },
-          { label: "Knowledge", value: knowledge?.length ?? "—" },
-          { label: "Tools", value: domain.tools.length },
-          { label: "Created", value: new Date(domain.created_at).toLocaleDateString() },
+          { label: "Experiments", value: experiments?.length ?? domain.experiment_ids.length, tab: "experiments" },
+          { label: "Knowledge", value: knowledge?.length ?? "—", tab: "knowledge" },
+          { label: "Tools", value: domain.tools.length, tab: "tools" },
+          { label: "Created", value: new Date(domain.created_at).toLocaleDateString(), tab: null },
         ].map((stat, i) => (
           <div
             key={stat.label}
-            className={`flex-1 px-5 py-3 ${i < 3 ? "border-r border-soft-fawn/20" : ""}`}
+            onClick={() => stat.tab && setActiveTab(stat.tab)}
+            className={cn(
+              "flex-1 px-5 py-3",
+              i < 3 ? "border-r border-soft-fawn/20" : "",
+              stat.tab ? "cursor-pointer hover:bg-wheat/20 transition-colors" : "",
+            )}
           >
             <div className="text-xs text-grey font-medium">{stat.label}</div>
             <div className="text-lg font-bold text-blackberry mt-0.5">{stat.value}</div>
@@ -122,8 +139,12 @@ export default function DomainDetailPage() {
       </div>
 
       {/* Tabbed content */}
-      <Tabs defaultValue="agent" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
+          <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
+            <LayoutDashboard className="h-3.5 w-3.5" />
+            Dashboard
+          </TabsTrigger>
           <TabsTrigger value="agent" className="flex items-center gap-1.5">
             <Bot className="h-3.5 w-3.5" />
             Agent
@@ -146,20 +167,40 @@ export default function DomainDetailPage() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="dashboard">
+          <DomainDashboard
+            experiments={experiments}
+            knowledge={knowledge}
+            metrics={metrics}
+            metricsLoading={metLoading}
+            onExperimentClick={handleExperimentClick}
+          />
+        </TabsContent>
+
         <TabsContent value="agent">
           <AgentSection domainId={domain.id} />
         </TabsContent>
 
         <TabsContent value="experiments">
-          <ExperimentsSection experiments={experiments} isLoading={expLoading} />
+          <ExperimentsSection
+            experiments={experiments}
+            isLoading={expLoading}
+            highlightId={highlightExpId}
+          />
         </TabsContent>
 
         <TabsContent value="knowledge">
-          <KnowledgeSection atoms={knowledge} isLoading={knLoading} />
+          <KnowledgeSection
+            atoms={knowledge}
+            isLoading={knLoading}
+            onEvidenceClick={handleExperimentClick}
+          />
         </TabsContent>
 
         <TabsContent value="metrics">
-          <MetricEvolutionChart data={metrics} isLoading={metLoading} />
+          <ErrorBoundary fallback={<p className="text-sm text-grey">Failed to load metrics chart.</p>}>
+            <MetricEvolutionChart data={metrics} isLoading={metLoading} />
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="tools">

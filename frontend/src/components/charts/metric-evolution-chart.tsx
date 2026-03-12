@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -14,11 +14,12 @@ import type { MetricPoint } from "@/types";
 interface MetricEvolutionChartProps {
   data: MetricPoint[] | undefined;
   isLoading: boolean;
+  onPointClick?: (experimentId: string) => void;
 }
 
 interface TooltipPayloadEntry {
   value: number;
-  payload: { expId: string };
+  payload: { expId: string; experimentId: string };
 }
 
 interface CustomTooltipProps {
@@ -28,32 +29,45 @@ interface CustomTooltipProps {
 
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
+  const val = payload[0].value;
+  const safeVal = typeof val === "number" ? val.toFixed(4) : String(val);
   return (
     <div className="bg-white border border-soft-fawn/30 rounded-xl px-3 py-2 shadow-sm text-xs">
-      <div className="font-semibold text-blackberry">{payload[0].value.toFixed(4)}</div>
+      <div className="font-semibold text-blackberry">{safeVal}</div>
       <div className="text-grey">exp: {payload[0].payload.expId}…</div>
     </div>
   );
 }
 
-export function MetricEvolutionChart({ data, isLoading }: MetricEvolutionChartProps) {
+export function MetricEvolutionChart({ data, isLoading, onPointClick }: MetricEvolutionChartProps) {
   const metricKeys = useMemo(() => {
     if (!data) return [];
     const keys = new Set<string>();
-    data.forEach((p) => Object.keys(p.metrics).forEach((k) => keys.add(k)));
+    data.forEach((p) => {
+      if (p.metrics && typeof p.metrics === "object") {
+        Object.keys(p.metrics).forEach((k) => keys.add(k));
+      }
+    });
     return Array.from(keys).sort();
   }, [data]);
 
-  const [selectedMetric, setSelectedMetric] = useState<string>(metricKeys[0] ?? "");
+  const [selectedMetric, setSelectedMetric] = useState<string>("");
+
+  useEffect(() => {
+    if (metricKeys.length > 0 && (!selectedMetric || !metricKeys.includes(selectedMetric))) {
+      setSelectedMetric(metricKeys[0]);
+    }
+  }, [metricKeys, selectedMetric]);
 
   const chartData = useMemo(() => {
-    if (!data) return [];
+    if (!data || !selectedMetric) return [];
     return data
-      .filter((p) => selectedMetric in p.metrics)
+      .filter((p) => p.metrics && selectedMetric in p.metrics)
       .map((p, i) => ({
         index: i + 1,
         value: p.metrics[selectedMetric],
         expId: p.experiment_id.slice(0, 8),
+        experimentId: p.experiment_id,
       }));
   }, [data, selectedMetric]);
 
@@ -108,7 +122,7 @@ export function MetricEvolutionChart({ data, isLoading }: MetricEvolutionChartPr
               tick={{ fontSize: 10, fill: "#857E7B" }}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(v: number) => v.toFixed(2)}
+              tickFormatter={(v: unknown) => (typeof v === "number" ? v.toFixed(2) : String(v))}
             />
             <Tooltip content={<CustomTooltip />} />
             <Line
@@ -117,7 +131,21 @@ export function MetricEvolutionChart({ data, isLoading }: MetricEvolutionChartPr
               stroke="#59344F"
               strokeWidth={2}
               dot={{ r: 3, fill: "#59344F", strokeWidth: 0 }}
-              activeDot={{ r: 5, fill: "#8BBF9F", strokeWidth: 0 }}
+              activeDot={
+                onPointClick
+                  ? {
+                      r: 5,
+                      fill: "#8BBF9F",
+                      strokeWidth: 0,
+                      cursor: "pointer",
+                      onClick: (_: unknown, payload: { payload?: { experimentId?: string } }) => {
+                        if (payload?.payload?.experimentId) {
+                          onPointClick(payload.payload.experimentId);
+                        }
+                      },
+                    }
+                  : { r: 5, fill: "#8BBF9F", strokeWidth: 0 }
+              }
             />
           </LineChart>
         </ResponsiveContainer>
