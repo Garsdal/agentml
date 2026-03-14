@@ -9,7 +9,7 @@
 ---
 
 <div align="center">
-  <img src="assets/dojo_chat_example.png" alt="Dojo chat example" width="800" />
+  <video src="assets/dojo_test_example.mov" alt="Dojo test example" width="800" controls></video>
 </div>
 
 ---
