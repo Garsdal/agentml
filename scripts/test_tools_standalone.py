@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Standalone test: run a simple ML task with AgentML tools via Claude Agent SDK."""
+"""Standalone test: run a simple ML task with Dojo.ml tools via Claude Agent SDK."""
 
 import asyncio
 
@@ -12,27 +12,27 @@ from claude_agent_sdk import (
     query,
 )
 
-from agentml.api.deps import build_lab
-from agentml.config.settings import Settings
-from agentml.tools.server import create_agentml_server, get_allowed_tool_names
-from agentml.utils.ids import generate_id
+from dojo.api.deps import build_lab
+from dojo.config.settings import Settings
+from dojo.tools.server import create_dojo_server, get_allowed_tool_names
+from dojo.utils.ids import generate_id
 
 
 async def main():
-    # Build lab with default settings (file-based storage in .agentml/)
+    # Build lab with default settings (file-based storage in .dojo/)
     settings = Settings.load()
     lab = build_lab(settings)
 
     # Create our MCP server via the Claude adapter
-    server = create_agentml_server(lab)  # defaults to adapter="claude"
+    server = create_dojo_server(lab)  # defaults to adapter="claude"
     allowed = get_allowed_tool_names(lab)
 
     task_id = generate_id()
 
     options = ClaudeAgentOptions(
-        mcp_servers={"agentml": server},
+        mcp_servers={"dojo": server},
         allowed_tools=[
-            *allowed,  # All AgentML tools
+            *allowed,  # All Dojo.ml tools
             "Bash",  # Claude Code built-ins
             "Read",
             "Write",

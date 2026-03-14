@@ -2,16 +2,16 @@
 
 import pytest
 
-from agentml.agents.backends.stub import StubAgentBackend
-from agentml.agents.orchestrator import AgentOrchestrator
-from agentml.api.deps import build_lab
-from agentml.config.settings import MemorySettings, Settings, StorageSettings, TrackingSettings
+from dojo.agents.backends.stub import StubAgentBackend
+from dojo.agents.orchestrator import AgentOrchestrator
+from dojo.api.deps import build_lab
+from dojo.config.settings import MemorySettings, Settings, StorageSettings, TrackingSettings
 
 
 @pytest.fixture
 def lab(tmp_path):
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(
             backend="mlflow",
             enabled=True,
@@ -62,7 +62,7 @@ async def test_multiple_experiments_tracked_separately(lab) -> None:
     assert m1["accuracy"] == pytest.approx(0.95)
     assert m2["accuracy"] == pytest.approx(0.95)
 
-    from agentml.tracking.mlflow_tracker import MlflowTracker
+    from dojo.tracking.mlflow_tracker import MlflowTracker
 
     assert isinstance(lab.tracking, MlflowTracker)
     assert experiments[0].id != experiments[1].id

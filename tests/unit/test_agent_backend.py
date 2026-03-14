@@ -2,11 +2,11 @@
 
 import pytest
 
-from agentml.agents.backend import AgentBackend
-from agentml.agents.backends.stub import StubAgentBackend
-from agentml.agents.factory import create_agent_backend
-from agentml.agents.types import AgentEvent, AgentRunConfig
-from agentml.tools.server import collect_all_tools
+from dojo.agents.backend import AgentBackend
+from dojo.agents.backends.stub import StubAgentBackend
+from dojo.agents.factory import create_agent_backend
+from dojo.agents.types import AgentEvent, AgentRunConfig
+from dojo.tools.server import collect_all_tools
 
 
 class TestStubAgentBackend:

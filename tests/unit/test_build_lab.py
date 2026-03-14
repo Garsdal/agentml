@@ -2,16 +2,16 @@
 
 import pytest
 
-from agentml.api.deps import build_lab
-from agentml.config.settings import MemorySettings, Settings, StorageSettings, TrackingSettings
-from agentml.storage.local import LocalMemoryStore
-from agentml.tracking.file_tracker import FileTracker
-from agentml.tracking.noop_tracker import NoopTracker
+from dojo.api.deps import build_lab
+from dojo.config.settings import MemorySettings, Settings, StorageSettings, TrackingSettings
+from dojo.storage.local import LocalMemoryStore
+from dojo.tracking.file_tracker import FileTracker
+from dojo.tracking.noop_tracker import NoopTracker
 
 
 def test_build_lab_file_tracker(tmp_path) -> None:
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(backend="file", enabled=True),
         memory=MemorySettings(backend="local"),
     )
@@ -22,7 +22,7 @@ def test_build_lab_file_tracker(tmp_path) -> None:
 
 def test_build_lab_tracking_disabled(tmp_path) -> None:
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(enabled=False),
         memory=MemorySettings(backend="local"),
     )
@@ -32,7 +32,7 @@ def test_build_lab_tracking_disabled(tmp_path) -> None:
 
 def test_build_lab_mlflow_tracker(tmp_path) -> None:
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(
             backend="mlflow",
             enabled=True,
@@ -42,14 +42,14 @@ def test_build_lab_mlflow_tracker(tmp_path) -> None:
         memory=MemorySettings(backend="local"),
     )
     lab = build_lab(settings)
-    from agentml.tracking.mlflow_tracker import MlflowTracker
+    from dojo.tracking.mlflow_tracker import MlflowTracker
 
     assert isinstance(lab.tracking, MlflowTracker)
 
 
 def test_build_lab_unknown_tracking_backend(tmp_path) -> None:
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(backend="unknown", enabled=True),
         memory=MemorySettings(backend="local"),
     )
@@ -59,7 +59,7 @@ def test_build_lab_unknown_tracking_backend(tmp_path) -> None:
 
 def test_build_lab_unknown_memory_backend(tmp_path) -> None:
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(backend="file", enabled=True),
         memory=MemorySettings(backend="unknown"),
     )

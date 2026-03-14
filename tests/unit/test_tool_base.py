@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from agentml.tools.base import ToolDef, ToolRegistry, ToolResult
+from dojo.tools.base import ToolDef, ToolRegistry, ToolResult
 
 
 class TestToolResult:

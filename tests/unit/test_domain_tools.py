@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from agentml.core.domain import Domain, DomainTool, Workspace, WorkspaceSource
-from agentml.tools.domain_tools import _build_tool_script, create_domain_tools
+from dojo.core.domain import Domain, DomainTool, Workspace, WorkspaceSource
+from dojo.tools.domain_tools import _build_tool_script, create_domain_tools
 
 
 def test_create_domain_tools_skips_non_executable(lab):

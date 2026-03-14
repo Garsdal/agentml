@@ -2,16 +2,16 @@
 
 import pytest
 
-from agentml.agents.backends.stub import StubAgentBackend
-from agentml.agents.orchestrator import AgentOrchestrator
-from agentml.api.deps import build_lab
-from agentml.config.settings import MemorySettings, Settings, StorageSettings, TrackingSettings
+from dojo.agents.backends.stub import StubAgentBackend
+from dojo.agents.orchestrator import AgentOrchestrator
+from dojo.api.deps import build_lab
+from dojo.config.settings import MemorySettings, Settings, StorageSettings, TrackingSettings
 
 
 @pytest.fixture
 def lab(tmp_path):
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(backend="file", enabled=True),
         memory=MemorySettings(backend="local"),
     )

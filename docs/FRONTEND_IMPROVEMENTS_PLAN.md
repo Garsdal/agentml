@@ -1,6 +1,6 @@
 # Frontend Improvements Plan
 
-> Addresses bugs, missing features, and UX issues identified in the current AgentML frontend.
+> Addresses bugs, missing features, and UX issues identified in the current Dojo.ml frontend.
 > Reference: MASTER_PLAN.md (Phase 4), FRONTEND_DESIGN_SYSTEM.md
 
 ---

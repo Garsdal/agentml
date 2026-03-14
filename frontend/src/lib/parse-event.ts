@@ -65,7 +65,7 @@ const TOOL_TEMPLATES: Record<string, ToolTemplate> = {
     metaFields: ["prompt"],
     category: "web",
   },
-  // AgentML tools (matched after stripping mcp__<server>__ prefix)
+  // Dojo.ml tools (matched after stripping mcp__<server>__ prefix)
   create_experiment: {
     primaryField: "hypothesis",
     isCode: false,
@@ -130,8 +130,10 @@ function stripMcpPrefix(toolName: string): string {
 
 function languageFromPath(filePath: string): string {
   if (filePath.endsWith(".py")) return "python";
-  if (filePath.endsWith(".ts") || filePath.endsWith(".tsx")) return "typescript";
-  if (filePath.endsWith(".js") || filePath.endsWith(".jsx")) return "javascript";
+  if (filePath.endsWith(".ts") || filePath.endsWith(".tsx"))
+    return "typescript";
+  if (filePath.endsWith(".js") || filePath.endsWith(".jsx"))
+    return "javascript";
   if (filePath.endsWith(".json")) return "json";
   if (filePath.endsWith(".sh")) return "bash";
   if (filePath.endsWith(".sql")) return "sql";
@@ -146,7 +148,8 @@ function formatMetaValue(value: unknown, truncate = 80): string {
   if (typeof value === "string") {
     return value.length > truncate ? value.slice(0, truncate) + "…" : value;
   }
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
   const json = JSON.stringify(value);
   return json.length > truncate ? json.slice(0, truncate) + "…" : json;
 }
@@ -175,15 +178,22 @@ export function parseEventContent(event: AgentEvent): ContentType {
       const template = TOOL_TEMPLATES[toolName];
 
       if (template && input) {
-        const labelVal = template.labelField ? input[template.labelField] : undefined;
-        const label = labelVal != null ? formatMetaValue(labelVal, 200) : undefined;
+        const labelVal = template.labelField
+          ? input[template.labelField]
+          : undefined;
+        const label =
+          labelVal != null ? formatMetaValue(labelVal, 200) : undefined;
 
-        let primary: { value: string; isCode: boolean; language?: string } | undefined;
+        let primary:
+          | { value: string; isCode: boolean; language?: string }
+          | undefined;
         if (template.primaryField) {
           const rawVal = input[template.primaryField];
           if (rawVal != null) {
             const value =
-              typeof rawVal === "string" ? rawVal : JSON.stringify(rawVal, null, 2);
+              typeof rawVal === "string"
+                ? rawVal
+                : JSON.stringify(rawVal, null, 2);
             let language = template.language;
             if (template.isCode && !language && template.labelField) {
               const fp = input[template.labelField];
@@ -202,7 +212,13 @@ export function parseEventContent(event: AgentEvent): ContentType {
           }
         }
 
-        return { kind: "structured", category: template.category, label, primary, meta };
+        return {
+          kind: "structured",
+          category: template.category,
+          label,
+          primary,
+          meta,
+        };
       }
 
       // Fallback for unknown tools
@@ -218,9 +234,10 @@ export function parseEventContent(event: AgentEvent): ContentType {
 
     case "tool_result": {
       const content = String(d.content ?? "");
-      const looksLikeCode = /^(import |def |class |SELECT |CREATE |#!|from )/.test(
-        content.trimStart(),
-      );
+      const looksLikeCode =
+        /^(import |def |class |SELECT |CREATE |#!|from )/.test(
+          content.trimStart(),
+        );
       if (looksLikeCode) {
         return { kind: "code", code: content, language: "python" };
       }

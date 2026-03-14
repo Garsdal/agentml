@@ -2,10 +2,10 @@
 
 import pytest
 
-from agentml.core.experiment import Experiment, Hypothesis
-from agentml.core.state_machine import ExperimentState
-from agentml.runtime.experiment_service import ExperimentService
-from agentml.tools.experiments import create_experiment_tools
+from dojo.core.experiment import Experiment, Hypothesis
+from dojo.core.state_machine import ExperimentState
+from dojo.runtime.experiment_service import ExperimentService
+from dojo.tools.experiments import create_experiment_tools
 
 
 @pytest.fixture

@@ -2,9 +2,9 @@
 
 import pytest
 
-from agentml.agents.backends.stub import StubAgentBackend
-from agentml.agents.orchestrator import AgentOrchestrator
-from agentml.agents.types import AgentEvent, RunStatus, ToolHint
+from dojo.agents.backends.stub import StubAgentBackend
+from dojo.agents.orchestrator import AgentOrchestrator
+from dojo.agents.types import AgentEvent, RunStatus, ToolHint
 
 
 class TestAgentOrchestrator:

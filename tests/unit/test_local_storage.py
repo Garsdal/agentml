@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from agentml.core.experiment import Experiment, ExperimentResult, Hypothesis
-from agentml.core.knowledge import KnowledgeAtom
-from agentml.core.state_machine import ExperimentState
-from agentml.storage.local import LocalArtifactStore, LocalExperimentStore, LocalMemoryStore
+from dojo.core.experiment import Experiment, ExperimentResult, Hypothesis
+from dojo.core.knowledge import KnowledgeAtom
+from dojo.core.state_machine import ExperimentState
+from dojo.storage.local import LocalArtifactStore, LocalExperimentStore, LocalMemoryStore
 
 
 @pytest.fixture

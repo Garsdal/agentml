@@ -2,7 +2,7 @@
 
 ## Current State Summary
 
-The AgentML frontend is a React 19 + Vite SPA using Tailwind CSS 4, Radix UI primitives, and SWR for data fetching. It currently has a dark-mode-first design with monochrome OKLCH color tokens, system fonts, and two routes: a domain overview grid and a domain detail page with tabbed sections (Agent, Experiments, Knowledge, Metrics, Tools). The agent panel displays a raw event stream in monospace — functional but lacking structured UX for different response types.
+The Dojo.ml frontend is a React 19 + Vite SPA using Tailwind CSS 4, Radix UI primitives, and SWR for data fetching. It currently has a dark-mode-first design with monochrome OKLCH color tokens, system fonts, and two routes: a domain overview grid and a domain detail page with tabbed sections (Agent, Experiments, Knowledge, Metrics, Tools). The agent panel displays a raw event stream in monospace — functional but lacking structured UX for different response types.
 
 ---
 
@@ -85,11 +85,11 @@ All existing CVA components need updated variants:
 
 ### 2.1 Header
 
-**Current:** Dark bar with "AgentML" text, version badge, health dot.
+**Current:** Dark bar with "Dojo.ml" text, version badge, health dot.
 
 **Proposed:**
 - Warm surface background (`--surface`) with bottom border `border-soft-fawn/20`
-- Logo: "AgentML" in Nunito 800, `text-blackberry`, with a small flask/beaker icon (lucide `flask-conical`) in `text-muted-teal`
+- Logo: "Dojo.ml" in Nunito 800, `text-blackberry`, with a small flask/beaker icon (lucide `flask-conical`) in `text-muted-teal`
 - Version badge: pill shape, `bg-wheat/30 text-blackberry`
 - Health indicator: keep the dot but use `--muted-teal` for healthy, `--danger` for unhealthy
 - Add breadcrumb navigation: `Domains > Domain Name > Agent` using `text-grey` with `text-blackberry` for current

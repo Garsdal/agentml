@@ -1,6 +1,6 @@
 """Unit tests for configuration loading."""
 
-from agentml.config.settings import MemorySettings, Settings, TrackingSettings
+from dojo.config.settings import MemorySettings, Settings, TrackingSettings
 
 
 def test_default_tracking_settings() -> None:
@@ -9,7 +9,7 @@ def test_default_tracking_settings() -> None:
     assert s.tracking.enabled is True
     # Default URI ends with /mlruns (may be resolved to absolute path by MLflow)
     assert s.tracking.mlflow_tracking_uri.endswith("mlruns")
-    assert s.tracking.mlflow_experiment_name == "agentml"
+    assert s.tracking.mlflow_experiment_name == "dojo"
 
 
 def test_default_memory_settings() -> None:

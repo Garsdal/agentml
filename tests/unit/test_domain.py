@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from agentml.core.domain import Domain, DomainStatus, DomainTool, ToolType
-from agentml.runtime.domain_service import DomainService
-from agentml.runtime.lab import LabEnvironment
-from agentml.storage.local import LocalDomainStore
+from dojo.core.domain import Domain, DomainStatus, DomainTool, ToolType
+from dojo.runtime.domain_service import DomainService
+from dojo.runtime.lab import LabEnvironment
+from dojo.storage.local import LocalDomainStore
 
 
 @pytest.fixture

@@ -6,16 +6,16 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from agentml.api.app import create_app
-from agentml.api.deps import build_lab
-from agentml.config.settings import (
+from dojo.api.app import create_app
+from dojo.api.deps import build_lab
+from dojo.config.settings import (
     AgentSettings,
     MemorySettings,
     Settings,
     StorageSettings,
     TrackingSettings,
 )
-from agentml.runtime.lab import LabEnvironment
+from dojo.runtime.lab import LabEnvironment
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def tmp_dir():
 def settings(tmp_dir: Path) -> Settings:
     """Settings pointing at a temp directory (file tracker, stub agent)."""
     return Settings(
-        storage=StorageSettings(base_dir=tmp_dir / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_dir / ".dojo"),
         tracking=TrackingSettings(backend="file", enabled=True),
         memory=MemorySettings(backend="local"),
         agent=AgentSettings(backend="stub"),
@@ -41,12 +41,12 @@ def mlflow_settings(tmp_dir: Path) -> Settings:
     """Settings with MLflow tracking pointing at a temp directory."""
     mlruns = tmp_dir / "mlruns"
     return Settings(
-        storage=StorageSettings(base_dir=tmp_dir / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_dir / ".dojo"),
         tracking=TrackingSettings(
             backend="mlflow",
             enabled=True,
             mlflow_tracking_uri=f"file:{mlruns}",
-            mlflow_experiment_name="test-agentml",
+            mlflow_experiment_name="test-dojo",
         ),
         memory=MemorySettings(backend="local"),
     )

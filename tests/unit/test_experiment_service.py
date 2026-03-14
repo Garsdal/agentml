@@ -2,10 +2,10 @@
 
 import pytest
 
-from agentml.core.experiment import Experiment, ExperimentResult
-from agentml.core.state_machine import ExperimentState
-from agentml.runtime.experiment_service import ExperimentService
-from agentml.runtime.lab import LabEnvironment
+from dojo.core.experiment import Experiment, ExperimentResult
+from dojo.core.state_machine import ExperimentState
+from dojo.runtime.experiment_service import ExperimentService
+from dojo.runtime.lab import LabEnvironment
 
 
 @pytest.fixture

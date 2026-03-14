@@ -1,4 +1,4 @@
-# AgentML task runner — https://github.com/casey/just
+# Dojo.ml task runner — https://github.com/casey/just
 
 # ── Development ───────────────────────────────────────────────────────────────
 
@@ -24,29 +24,29 @@ format:
 
 # Start with stub agent (no API key required)
 run-stub *ARGS:
-    AGENTML_AGENT__BACKEND=stub uv run agentml start {{ARGS}}
+    DOJO_AGENT__BACKEND=stub uv run dojo start {{ARGS}}
 
 # Start with Claude agent (uses claude CLI subscription; ANTHROPIC_API_KEY only needed for domain tool generation)
 run-claude *ARGS:
-    AGENTML_AGENT__BACKEND=claude uv run agentml start {{ARGS}}
+    DOJO_AGENT__BACKEND=claude uv run dojo start {{ARGS}}
 
 # Start with stub agent + MLflow tracking (MLflow UI on :8080)
 run-stub-mlflow *ARGS:
     PYTHONWARNINGS=ignore::FutureWarning uv run mlflow server --backend-store-uri ./mlruns --host 127.0.0.1 --port 8080 2>/dev/null &
     @sleep 2
-    AGENTML_AGENT__BACKEND=stub \
-    AGENTML_TRACKING__BACKEND=mlflow \
-    AGENTML_TRACKING__MLFLOW_TRACKING_URI=http://127.0.0.1:8080 \
-    uv run agentml start {{ARGS}}
+    DOJO_AGENT__BACKEND=stub \
+    DOJO_TRACKING__BACKEND=mlflow \
+    DOJO_TRACKING__MLFLOW_TRACKING_URI=http://127.0.0.1:8080 \
+    uv run dojo start {{ARGS}}
 
 # Start with Claude agent + MLflow tracking (MLflow UI on :8080)
 run-claude-mlflow *ARGS:
     PYTHONWARNINGS=ignore::FutureWarning uv run mlflow server --backend-store-uri ./mlruns --host 127.0.0.1 --port 8080 2>/dev/null &
     @sleep 2
-    AGENTML_AGENT__BACKEND=claude \
-    AGENTML_TRACKING__BACKEND=mlflow \
-    AGENTML_TRACKING__MLFLOW_TRACKING_URI=http://127.0.0.1:8080 \
-    uv run agentml start {{ARGS}}
+    DOJO_AGENT__BACKEND=claude \
+    DOJO_TRACKING__BACKEND=mlflow \
+    DOJO_TRACKING__MLFLOW_TRACKING_URI=http://127.0.0.1:8080 \
+    uv run dojo start {{ARGS}}
 
 # Stop all services (backend :8000, frontend :5173, MLflow :8080)
 stop:
@@ -70,4 +70,4 @@ frontend-build:
 # Run frontend in background + backend (without built-in frontend server)
 dev-all:
     cd frontend && npm run dev &
-    uv run agentml start --no-frontend
+    uv run dojo start --no-frontend

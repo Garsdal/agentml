@@ -1,7 +1,7 @@
 """Unit tests for knowledge tool handlers."""
 
-from agentml.tools.base import ToolResult
-from agentml.tools.knowledge import create_knowledge_tools
+from dojo.tools.base import ToolResult
+from dojo.tools.knowledge import create_knowledge_tools
 
 
 async def test_write_knowledge(lab):

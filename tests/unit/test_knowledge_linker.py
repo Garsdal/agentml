@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from agentml.runtime.keyword_linker import KeywordKnowledgeLinker
-from agentml.storage.local import LocalKnowledgeLinkStore, LocalMemoryStore
+from dojo.runtime.keyword_linker import KeywordKnowledgeLinker
+from dojo.storage.local import LocalKnowledgeLinkStore, LocalMemoryStore
 
 
 @pytest.fixture

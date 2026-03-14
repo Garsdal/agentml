@@ -1,6 +1,6 @@
 # Frontend Design System
 
-Reference for all styling decisions in the AgentML frontend.
+Reference for all styling decisions in the Dojo.ml frontend.
 
 ## Colors
 

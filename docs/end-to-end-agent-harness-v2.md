@@ -1,6 +1,6 @@
 # End-to-End Agent Harness v2 — Agent Sessions, API & UI
 
-> **Prerequisite:** v1 is complete — AgentML MCP tools exist as `ToolDef` instances with the `ClaudeToolAdapter`.
+> **Prerequisite:** v1 is complete — Dojo.ml MCP tools exist as `ToolDef` instances with the `ClaudeToolAdapter`.
 >
 > **Goal:** Wire an agent into the FastAPI backend so users can start, monitor, and stop ML research sessions from the UI. The agent backend is abstracted behind an `AgentBackend` interface — swappable between Claude, Copilot, or any future SDK.
 
@@ -29,7 +29,7 @@ From the Claude Agent SDK docs, the Claude implementation uses:
 UI → POST /agent/run → AgentOrchestrator
                             │
                             ├── Build LabEnvironment (existing)
-                            ├── Collect AgentML ToolDefs (v1)
+                            ├── Collect Dojo.ml ToolDefs (v1)
                             ├── Select AgentBackend (from config)
                             │     ├── ClaudeAgentBackend (claude-agent-sdk)
                             │     └── (future) CopilotAgentBackend, etc.
@@ -132,7 +132,7 @@ The `AgentBackend` ABC defines the interface for launching, executing, and stopp
 
 ### 2.1 Domain Types (shared, SDK-agnostic)
 
-**File:** `src/agentml/agents/types.py`
+**File:** `src/dojo/agents/types.py`
 
 ```python
 """Shared types for agent sessions — SDK-agnostic."""
@@ -144,7 +144,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from agentml.utils.ids import generate_id
+from dojo.utils.ids import generate_id
 
 
 class RunStatus(str, Enum):
@@ -217,7 +217,7 @@ class AgentRun:
 
 ### 2.2 AgentBackend ABC
 
-**File:** `src/agentml/agents/backend.py`
+**File:** `src/dojo/agents/backend.py`
 
 ```python
 """Agent backend interface — the port for agent session execution."""
@@ -227,8 +227,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
-from agentml.agents.types import AgentEvent, AgentRunConfig, AgentRunResult
-from agentml.tools.base import ToolDef
+from dojo.agents.types import AgentEvent, AgentRunConfig, AgentRunResult
+from dojo.tools.base import ToolDef
 
 
 class AgentBackend(ABC):
@@ -306,7 +306,7 @@ class AgentBackend(ABC):
 
 ### 2.4 Relationship to Existing `Agent` Interface
 
-The existing `src/agentml/interfaces/agent.py` defines an `Agent` ABC with `run(task, lab)`. This was designed for the `StubAgent` pattern (synchronous task execution). 
+The existing `src/dojo/interfaces/agent.py` defines an `Agent` ABC with `run(task, lab)`. This was designed for the `StubAgent` pattern (synchronous task execution). 
 
 `AgentBackend` is a **different abstraction** — it manages an interactive, streaming session with an external AI agent. The two could eventually be unified, but for v2 we keep them separate:
 
@@ -317,7 +317,7 @@ The existing `src/agentml/interfaces/agent.py` defines an `Agent` ABC with `run(
 
 ## 3. Claude Agent Backend
 
-**File:** `src/agentml/agents/backends/claude.py`
+**File:** `src/dojo/agents/backends/claude.py`
 
 This is the first (and for now only) concrete implementation of `AgentBackend`.
 
@@ -342,11 +342,11 @@ from claude_agent_sdk import (
     ToolUseBlock,
 )
 
-from agentml.agents.backend import AgentBackend
-from agentml.agents.types import AgentEvent, AgentRunConfig, AgentRunResult
-from agentml.tools.adapters.claude import ClaudeToolAdapter
-from agentml.tools.base import ToolDef
-from agentml.utils.logging import get_logger
+from dojo.agents.backend import AgentBackend
+from dojo.agents.types import AgentEvent, AgentRunConfig, AgentRunResult
+from dojo.tools.adapters.claude import ClaudeToolAdapter
+from dojo.tools.base import ToolDef
+from dojo.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -380,12 +380,12 @@ class ClaudeAgentBackend(AgentBackend):
         self._tool_defs = tool_defs
 
         # Use the v1 ClaudeToolAdapter to create the MCP server
-        server = self._tool_adapter.create_server("agentml", tool_defs)
-        allowed_agentml = self._tool_adapter.tool_names_prefixed("agentml", tool_defs)
+        server = self._tool_adapter.create_server("dojo", tool_defs)
+        allowed_dojo = self._tool_adapter.tool_names_prefixed("dojo", tool_defs)
 
         self._options = ClaudeAgentOptions(
-            mcp_servers={"agentml": server},
-            allowed_tools=[*allowed_agentml, *BUILTIN_TOOLS],
+            mcp_servers={"dojo": server},
+            allowed_tools=[*allowed_dojo, *BUILTIN_TOOLS],
             system_prompt=config.system_prompt,
             permission_mode=config.permission_mode,
             max_turns=config.max_turns,
@@ -544,7 +544,7 @@ class StubAgentBackend(AgentBackend):
 
 ## 4. Agent Orchestrator
 
-**File:** `src/agentml/agents/orchestrator.py`
+**File:** `src/dojo/agents/orchestrator.py`
 
 The orchestrator manages a single agent run's lifecycle. It delegates all SDK-specific work to the `AgentBackend`. It never imports `claude_agent_sdk`.
 
@@ -555,13 +555,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from agentml.agents.backend import AgentBackend
-from agentml.agents.prompts import build_system_prompt
-from agentml.agents.types import AgentEvent, AgentRun, AgentRunConfig, RunStatus
-from agentml.runtime.lab import LabEnvironment
-from agentml.tools.server import collect_all_tools
-from agentml.utils.ids import generate_id
-from agentml.utils.logging import get_logger
+from dojo.agents.backend import AgentBackend
+from dojo.agents.prompts import build_system_prompt
+from dojo.agents.types import AgentEvent, AgentRun, AgentRunConfig, RunStatus
+from dojo.runtime.lab import LabEnvironment
+from dojo.tools.server import collect_all_tools
+from dojo.utils.ids import generate_id
+from dojo.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -671,7 +671,7 @@ class AgentOrchestrator:
 
 def _result_from_event(event: AgentEvent) -> "AgentRunResult":
     """Extract AgentRunResult from a result event's data dict."""
-    from agentml.agents.types import AgentRunResult
+    from dojo.agents.types import AgentRunResult
 
     return AgentRunResult(
         session_id=event.data.get("session_id"),
@@ -684,7 +684,7 @@ def _result_from_event(event: AgentEvent) -> "AgentRunResult":
 
 ### 4.1 Backend Factory
 
-**File:** `src/agentml/agents/factory.py`
+**File:** `src/dojo/agents/factory.py`
 
 Dispatches on the configured backend name to create the right `AgentBackend` instance.
 
@@ -693,7 +693,7 @@ Dispatches on the configured backend name to create the right `AgentBackend` ins
 
 from __future__ import annotations
 
-from agentml.agents.backend import AgentBackend
+from dojo.agents.backend import AgentBackend
 
 
 def create_agent_backend(backend: str = "claude") -> AgentBackend:
@@ -709,12 +709,12 @@ def create_agent_backend(backend: str = "claude") -> AgentBackend:
         ValueError: If the backend name is unknown.
     """
     if backend == "claude":
-        from agentml.agents.backends.claude import ClaudeAgentBackend
+        from dojo.agents.backends.claude import ClaudeAgentBackend
 
         return ClaudeAgentBackend()
 
     if backend == "stub":
-        from agentml.agents.backends.stub import StubAgentBackend
+        from dojo.agents.backends.stub import StubAgentBackend
 
         return StubAgentBackend()
 
@@ -726,26 +726,26 @@ def create_agent_backend(backend: str = "claude") -> AgentBackend:
 
 ## 5. System Prompt Design
 
-**File:** `src/agentml/agents/prompts.py`
+**File:** `src/dojo/agents/prompts.py`
 
 Unchanged from the original — system prompts are SDK-agnostic by nature.
 
 ```python
-"""System prompt templates for AgentML agent sessions."""
+"""System prompt templates for Dojo.ml agent sessions."""
 
-from agentml.agents.types import AgentRun
+from dojo.agents.types import AgentRun
 
 
 def build_system_prompt(run: AgentRun) -> str:
     """Build the system prompt for an agent session.
 
-    This prompt is backend-agnostic — it describes the AgentML tools
+    This prompt is backend-agnostic — it describes the Dojo.ml tools
     and workflow, not any specific SDK features.
     """
     hints_section = ""
     # Tool hints would be injected here (see section 10)
 
-    return f"""You are an autonomous ML research agent operating within AgentML.
+    return f"""You are an autonomous ML research agent operating within Dojo.ml.
 
 ## Your role
 You systematically explore ML approaches to solve a given problem. You create
@@ -757,8 +757,8 @@ experiments, write and execute code, track results, and record learnings.
 Always pass this task_id when calling create_experiment so experiments are linked
 to this task.
 
-## Available AgentML tools (via MCP)
-These tools manage experiments and knowledge in AgentML's platform:
+## Available Dojo.ml tools (via MCP)
+These tools manage experiments and knowledge in Dojo.ml's platform:
 
 - **create_experiment** — Register a new experiment with a hypothesis BEFORE running code
 - **complete_experiment** — Mark as done with metrics after code runs successfully
@@ -801,7 +801,7 @@ Use them to run Python scripts for training, evaluation, etc.
 
 ## 6. API Routes
 
-**File:** `src/agentml/api/routers/agent.py`
+**File:** `src/dojo/api/routers/agent.py`
 
 Updated to use the backend factory. The router creates an `AgentOrchestrator` with whichever `AgentBackend` is configured.
 
@@ -815,10 +815,10 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from agentml.agents.factory import create_agent_backend
-from agentml.agents.orchestrator import AgentOrchestrator
-from agentml.agents.types import AgentRun, RunStatus
-from agentml.runtime.lab import LabEnvironment
+from dojo.agents.factory import create_agent_backend
+from dojo.agents.orchestrator import AgentOrchestrator
+from dojo.agents.types import AgentRun, RunStatus
+from dojo.runtime.lab import LabEnvironment
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -991,8 +991,8 @@ def _to_response(run: AgentRun) -> AgentRunResponse:
 **Wire into app:**
 
 ```python
-# src/agentml/api/app.py — add:
-from agentml.api.routers import agent
+# src/dojo/api/app.py — add:
+from dojo.api.routers import agent
 app.include_router(agent.router)
 ```
 
@@ -1206,7 +1206,7 @@ Add "Agent" link in `frontend/src/components/layout/shell.tsx` nav.
 
 ### Settings additions
 
-**File:** `src/agentml/config/settings.py`
+**File:** `src/dojo/config/settings.py`
 
 ```python
 class AgentSettings(BaseSettings):
@@ -1225,9 +1225,9 @@ class Settings(BaseSettings):
 ### Environment variables
 
 ```bash
-AGENTML__AGENT__BACKEND=claude
-AGENTML__AGENT__MAX_TURNS=100
-AGENTML__AGENT__MAX_BUDGET_USD=5.00
+DOJO__AGENT__BACKEND=claude
+DOJO__AGENT__MAX_TURNS=100
+DOJO__AGENT__MAX_BUDGET_USD=5.00
 ```
 
 ---
@@ -1268,15 +1268,15 @@ if run.tool_hints:
 
 | File | Purpose |
 |---|---|
-| `src/agentml/agents/types.py` | `AgentRun`, `AgentEvent`, `AgentRunConfig`, `AgentRunResult`, `RunStatus` |
-| `src/agentml/agents/backend.py` | `AgentBackend` ABC (the port) |
-| `src/agentml/agents/factory.py` | `create_agent_backend()` factory function |
-| `src/agentml/agents/orchestrator.py` | `AgentOrchestrator` (SDK-agnostic) |
-| `src/agentml/agents/prompts.py` | System prompt template |
-| `src/agentml/agents/backends/__init__.py` | Backends package init |
-| `src/agentml/agents/backends/claude.py` | `ClaudeAgentBackend` (Claude Agent SDK adapter) |
-| `src/agentml/agents/backends/stub.py` | `StubAgentBackend` (for testing & UI dev) |
-| `src/agentml/api/routers/agent.py` | Agent run API routes + SSE |
+| `src/dojo/agents/types.py` | `AgentRun`, `AgentEvent`, `AgentRunConfig`, `AgentRunResult`, `RunStatus` |
+| `src/dojo/agents/backend.py` | `AgentBackend` ABC (the port) |
+| `src/dojo/agents/factory.py` | `create_agent_backend()` factory function |
+| `src/dojo/agents/orchestrator.py` | `AgentOrchestrator` (SDK-agnostic) |
+| `src/dojo/agents/prompts.py` | System prompt template |
+| `src/dojo/agents/backends/__init__.py` | Backends package init |
+| `src/dojo/agents/backends/claude.py` | `ClaudeAgentBackend` (Claude Agent SDK adapter) |
+| `src/dojo/agents/backends/stub.py` | `StubAgentBackend` (for testing & UI dev) |
+| `src/dojo/api/routers/agent.py` | Agent run API routes + SSE |
 | `frontend/src/pages/agent.tsx` | Agent page |
 | `frontend/src/hooks/use-agent.ts` | Agent runs hooks |
 | `frontend/src/hooks/use-agent-events.ts` | SSE event stream hook |
@@ -1293,8 +1293,8 @@ if run.tool_hints:
 
 | File | Change |
 |---|---|
-| `src/agentml/api/app.py` | Include agent router |
-| `src/agentml/config/settings.py` | Add `AgentSettings` with `backend` field |
+| `src/dojo/api/app.py` | Include agent router |
+| `src/dojo/config/settings.py` | Add `AgentSettings` with `backend` field |
 | `pyproject.toml` | Add `sse-starlette` dependency |
 | `frontend/src/types.ts` | Add `AgentRun`, `AgentEvent`, `ToolHint` types |
 | `frontend/src/App.tsx` | Add agent route |
@@ -1404,7 +1404,7 @@ Step 11 — Polish                               ~1 hour
    ├── build_system_prompt(run) → system prompt string
    ├── collect_all_tools(lab) → [ToolDef, ToolDef, ...] (11 tools)
    └── backend.configure(tool_defs, config)
-       ├── ClaudeToolAdapter.create_server("agentml", tool_defs) → MCP server
+       ├── ClaudeToolAdapter.create_server("dojo", tool_defs) → MCP server
        └── ClaudeSDKClient(options) initialized
 5. asyncio.create_task(orchestrator.execute(run))
    └── backend.execute(prompt) → yields AgentEvent stream
@@ -1451,7 +1451,7 @@ Experiments: 5 created, 4 completed, 1 failed
 Knowledge atoms: 7 recorded
 ```
 
-### What persists in AgentML
+### What persists in Dojo.ml
 
 - **Experiments** in `experiment_store` — full lifecycle with metrics
 - **Knowledge atoms** in `memory_store` — learnings for future tasks
@@ -1466,7 +1466,7 @@ The hexagonal architecture is now complete across both tools and agent sessions:
 
 ```
                     ┌──────────────────────────────────┐
-                    │        AgentML Core Domain        │
+                    │        Dojo.ml Core Domain        │
                     │  ToolDef, ToolResult, AgentEvent   │
                     │  AgentRun, AgentRunConfig          │
                     │  Experiment, Knowledge, Task       │
@@ -1511,7 +1511,7 @@ The original plan included complexity that the adapter pattern and SDK make unne
 | Original concept | Current approach | Simplification |
 |---|---|---|
 | Orchestrator directly uses `ClaudeSDKClient` | Orchestrator uses `AgentBackend` ABC | SDK-agnostic orchestrator |
-| Hard-coded `AGENTML_TOOLS` list | `ClaudeToolAdapter.tool_names_prefixed()` | Tool names derived from adapter |
+| Hard-coded `DOJO_TOOLS` list | `ClaudeToolAdapter.tool_names_prefixed()` | Tool names derived from adapter |
 | `_message_to_event()` in orchestrator | `_message_to_events()` in `ClaudeAgentBackend` | SDK-specific parsing stays in backend |
 | Claude imports in orchestrator | Zero SDK imports in orchestrator | Clean separation of concerns |
 | Testing requires mocking `ClaudeSDKClient` | `StubAgentBackend` for orchestrator tests | SDK-free orchestrator tests |

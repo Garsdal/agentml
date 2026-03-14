@@ -1,6 +1,6 @@
 """Unit tests for the NoopTracker."""
 
-from agentml.tracking.noop_tracker import NoopTracker
+from dojo.tracking.noop_tracker import NoopTracker
 
 
 async def test_noop_does_not_raise() -> None:

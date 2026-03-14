@@ -1,6 +1,6 @@
-# End-to-End Agent Harness v1 — AgentML MCP Tools
+# End-to-End Agent Harness v1 — Dojo.ml MCP Tools
 
-> **Goal:** Define all AgentML domain operations as framework-agnostic tool definitions, with an adapter layer that maps them to Claude Agent SDK MCP tools (and later Copilot SDK, raw MCP, etc.).
+> **Goal:** Define all Dojo.ml domain operations as framework-agnostic tool definitions, with an adapter layer that maps them to Claude Agent SDK MCP tools (and later Copilot SDK, raw MCP, etc.).
 
 ---
 
@@ -15,14 +15,14 @@ The Claude Agent SDK (`claude-agent-sdk`) **is** the agent. It already handles:
 - Subagent orchestration (`Agent` tool)
 - Permission management & sandboxing
 
-**Our job** is to provide well-defined tools that let any agent SDK interact with AgentML's domain — experiments, knowledge, tracking, metrics. The tools themselves are SDK-agnostic; only the adapter layer knows about a specific SDK.
+**Our job** is to provide well-defined tools that let any agent SDK interact with Dojo.ml's domain — experiments, knowledge, tracking, metrics. The tools themselves are SDK-agnostic; only the adapter layer knows about a specific SDK.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                  Agent SDK (Claude / Copilot / …)            │
 │  Built-in: Bash, Read, Write, Edit, WebFetch…               │
 │                                                              │
-│  + AgentML Tools (via adapter)                               │
+│  + Dojo.ml Tools (via adapter)                               │
 │    ├── create_experiment                                     │
 │    ├── complete_experiment                                   │
 │    ├── fail_experiment                                       │
@@ -75,9 +75,9 @@ The Claude Agent SDK (`claude-agent-sdk`) **is** the agent. It already handles:
 |---|---|
 | **`ToolDef` abstraction** | Framework-agnostic dataclass: `name`, `description`, `parameters` (JSON Schema), `handler` (async callable) |
 | **`ToolResult` abstraction** | Standard return type wrapping tool output, errors, and metadata |
-| **AgentML tool definitions** | 11 tools defined as `ToolDef` instances, each backed by `LabEnvironment` services |
+| **Dojo.ml tool definitions** | 11 tools defined as `ToolDef` instances, each backed by `LabEnvironment` services |
 | **`ClaudeToolAdapter`** | Adapter that converts `ToolDef` → Claude Agent SDK `@tool` decorated functions |
-| **MCP server factory** | `create_agentml_server(lab)` → uses adapter to produce `McpSdkServerConfig` |
+| **MCP server factory** | `create_dojo_server(lab)` → uses adapter to produce `McpSdkServerConfig` |
 | **Tool unit tests** | Each tool handler tested in isolation (no SDK dependency needed) |
 | **Standalone validation script** | A script that wires tools through the Claude adapter and runs a simple experiment |
 | **Dependency addition** | `claude-agent-sdk` added to `pyproject.toml` optional deps |
@@ -98,11 +98,11 @@ The abstraction sits between our domain tools and any SDK. Tools define *what* t
 
 ### 2.1 `ToolDef` — Framework-Agnostic Tool Definition
 
-**File:** `src/agentml/tools/base.py`
+**File:** `src/dojo/tools/base.py`
 
 ```python
-# src/agentml/tools/base.py
-"""Framework-agnostic tool definitions for AgentML."""
+# src/dojo/tools/base.py
+"""Framework-agnostic tool definitions for Dojo.ml."""
 
 from __future__ import annotations
 
@@ -194,24 +194,24 @@ class ToolRegistry:
 
 ### 2.3 Replaces `ToolRuntime` Interface
 
-The existing `ToolRuntime` ABC (`src/agentml/interfaces/tool_runtime.py`) defined `register_tool()`, `list_tools()`, `call_tool()` — a register-and-dispatch pattern tightly coupled to a single runtime. 
+The existing `ToolRuntime` ABC (`src/dojo/interfaces/tool_runtime.py`) defined `register_tool()`, `list_tools()`, `call_tool()` — a register-and-dispatch pattern tightly coupled to a single runtime. 
 
 The new pattern is:
 - **`ToolDef`** replaces `register_tool()` — tools are data, not registered callbacks
 - **`ToolRegistry`** replaces `list_tools()` — a simple list, no runtime coupling
 - **The agent SDK** replaces `call_tool()` — the SDK dispatches tool calls, not us
 
-**Action:** Delete `src/agentml/interfaces/tool_runtime.py` and remove its re-export from `interfaces/__init__.py`.
+**Action:** Delete `src/dojo/interfaces/tool_runtime.py` and remove its re-export from `interfaces/__init__.py`.
 
 ---
 
 ## 3. Tool Definitions
 
-All tools live in `src/agentml/tools/`. Each tool module exports a function `create_*_tools(lab) → list[ToolDef]` that returns framework-agnostic tool definitions.
+All tools live in `src/dojo/tools/`. Each tool module exports a function `create_*_tools(lab) → list[ToolDef]` that returns framework-agnostic tool definitions.
 
 ### 3.1 Experiment Tools
 
-**File:** `src/agentml/tools/experiments.py`
+**File:** `src/dojo/tools/experiments.py`
 
 | Tool | Args | Description | Delegates to |
 |---|---|---|---|
@@ -223,15 +223,15 @@ All tools live in `src/agentml/tools/`. Each tool module exports a function `cre
 | `compare_experiments` | `experiment_ids: list[str]` | Compare metrics across experiments | Multiple `ExperimentService.get()` + format |
 
 ```python
-# src/agentml/tools/experiments.py
-"""AgentML experiment management tools."""
+# src/dojo/tools/experiments.py
+"""Dojo.ml experiment management tools."""
 
 from typing import Any
 
-from agentml.core.experiment import Experiment, ExperimentResult, Hypothesis
-from agentml.runtime.experiment_service import ExperimentService
-from agentml.runtime.lab import LabEnvironment
-from agentml.tools.base import ToolDef, ToolResult
+from dojo.core.experiment import Experiment, ExperimentResult, Hypothesis
+from dojo.runtime.experiment_service import ExperimentService
+from dojo.runtime.lab import LabEnvironment
+from dojo.tools.base import ToolDef, ToolResult
 
 
 def create_experiment_tools(lab: LabEnvironment) -> list[ToolDef]:
@@ -424,7 +424,7 @@ def create_experiment_tools(lab: LabEnvironment) -> list[ToolDef]:
 
 ### 3.2 Knowledge Tools
 
-**File:** `src/agentml/tools/knowledge.py`
+**File:** `src/dojo/tools/knowledge.py`
 
 | Tool | Args | Description | Delegates to |
 |---|---|---|---|
@@ -433,14 +433,14 @@ def create_experiment_tools(lab: LabEnvironment) -> list[ToolDef]:
 | `list_knowledge` | — | List all knowledge atoms | `MemoryStore.list()` |
 
 ```python
-# src/agentml/tools/knowledge.py
-"""AgentML knowledge management tools."""
+# src/dojo/tools/knowledge.py
+"""Dojo.ml knowledge management tools."""
 
 from typing import Any
 
-from agentml.core.knowledge import KnowledgeAtom
-from agentml.runtime.lab import LabEnvironment
-from agentml.tools.base import ToolDef, ToolResult
+from dojo.core.knowledge import KnowledgeAtom
+from dojo.runtime.lab import LabEnvironment
+from dojo.tools.base import ToolDef, ToolResult
 
 
 def create_knowledge_tools(lab: LabEnvironment) -> list[ToolDef]:
@@ -538,7 +538,7 @@ def create_knowledge_tools(lab: LabEnvironment) -> list[ToolDef]:
 
 ### 3.3 Tracking Tools
 
-**File:** `src/agentml/tools/tracking.py`
+**File:** `src/dojo/tools/tracking.py`
 
 | Tool | Args | Description | Delegates to |
 |---|---|---|---|
@@ -546,13 +546,13 @@ def create_knowledge_tools(lab: LabEnvironment) -> list[ToolDef]:
 | `log_params` | `experiment_id`, `params` | Log parameters to tracking backend | `TrackingConnector.log_params()` |
 
 ```python
-# src/agentml/tools/tracking.py
-"""AgentML tracking tools."""
+# src/dojo/tools/tracking.py
+"""Dojo.ml tracking tools."""
 
 from typing import Any
 
-from agentml.runtime.lab import LabEnvironment
-from agentml.tools.base import ToolDef, ToolResult
+from dojo.runtime.lab import LabEnvironment
+from dojo.tools.base import ToolDef, ToolResult
 
 
 def create_tracking_tools(lab: LabEnvironment) -> list[ToolDef]:
@@ -613,10 +613,10 @@ Adapters convert `ToolDef` instances into SDK-specific tool objects. Each adapte
 
 ### 4.1 Adapter ABC
 
-**File:** `src/agentml/tools/adapters/base.py`
+**File:** `src/dojo/tools/adapters/base.py`
 
 ```python
-# src/agentml/tools/adapters/base.py
+# src/dojo/tools/adapters/base.py
 """Base adapter interface for converting ToolDef to SDK-specific formats."""
 
 from __future__ import annotations
@@ -624,7 +624,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
-from agentml.tools.base import ToolDef
+from dojo.tools.base import ToolDef
 
 
 class ToolAdapter(ABC):
@@ -682,10 +682,10 @@ class ToolAdapter(ABC):
 
 ### 4.2 Claude Agent SDK Adapter
 
-**File:** `src/agentml/tools/adapters/claude.py`
+**File:** `src/dojo/tools/adapters/claude.py`
 
 ```python
-# src/agentml/tools/adapters/claude.py
+# src/dojo/tools/adapters/claude.py
 """Claude Agent SDK adapter — converts ToolDef to @tool decorated functions."""
 
 from __future__ import annotations
@@ -694,7 +694,7 @@ from typing import Any
 
 from claude_agent_sdk import tool as sdk_tool, create_sdk_mcp_server
 
-from agentml.tools.base import ToolDef, ToolResult
+from dojo.tools.base import ToolDef, ToolResult
 
 
 class ClaudeToolAdapter:
@@ -752,10 +752,10 @@ class ClaudeToolAdapter:
 
 ```python
 # Example: wiring it all up
-from agentml.tools.experiments import create_experiment_tools
-from agentml.tools.knowledge import create_knowledge_tools
-from agentml.tools.tracking import create_tracking_tools
-from agentml.tools.adapters.claude import ClaudeToolAdapter
+from dojo.tools.experiments import create_experiment_tools
+from dojo.tools.knowledge import create_knowledge_tools
+from dojo.tools.tracking import create_tracking_tools
+from dojo.tools.adapters.claude import ClaudeToolAdapter
 
 # 1. Create framework-agnostic tool definitions
 all_tools = [
@@ -766,12 +766,12 @@ all_tools = [
 
 # 2. Adapt to Claude SDK format
 adapter = ClaudeToolAdapter()
-server = adapter.create_server("agentml", all_tools)
-allowed = adapter.tool_names_prefixed("agentml", all_tools)
+server = adapter.create_server("dojo", all_tools)
+allowed = adapter.tool_names_prefixed("dojo", all_tools)
 
 # 3. Use with Claude
 options = ClaudeAgentOptions(
-    mcp_servers={"agentml": server},
+    mcp_servers={"dojo": server},
     allowed_tools=allowed,
 )
 ```
@@ -805,27 +805,27 @@ class MCPToolAdapter(ToolAdapter):
 
 ## 5. MCP Server Factory
 
-**File:** `src/agentml/tools/server.py`
+**File:** `src/dojo/tools/server.py`
 
-This is the composition root for all AgentML tools. It collects all tool definitions and uses the appropriate adapter.
+This is the composition root for all Dojo.ml tools. It collects all tool definitions and uses the appropriate adapter.
 
 ```python
-# src/agentml/tools/server.py
-"""AgentML tool server — bundles all tools and adapts to target SDK."""
+# src/dojo/tools/server.py
+"""Dojo.ml tool server — bundles all tools and adapts to target SDK."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from agentml.runtime.lab import LabEnvironment
-from agentml.tools.base import ToolDef, ToolRegistry
-from agentml.tools.experiments import create_experiment_tools
-from agentml.tools.knowledge import create_knowledge_tools
-from agentml.tools.tracking import create_tracking_tools
+from dojo.runtime.lab import LabEnvironment
+from dojo.tools.base import ToolDef, ToolRegistry
+from dojo.tools.experiments import create_experiment_tools
+from dojo.tools.knowledge import create_knowledge_tools
+from dojo.tools.tracking import create_tracking_tools
 
 
 def collect_all_tools(lab: LabEnvironment) -> list[ToolDef]:
-    """Collect all AgentML tool definitions backed by a LabEnvironment.
+    """Collect all Dojo.ml tool definitions backed by a LabEnvironment.
 
     Returns framework-agnostic ToolDef instances — not tied to any SDK.
     """
@@ -836,8 +836,8 @@ def collect_all_tools(lab: LabEnvironment) -> list[ToolDef]:
     ]
 
 
-def create_agentml_server(lab: LabEnvironment, *, adapter: str = "claude") -> Any:
-    """Create the AgentML tool server using the specified adapter.
+def create_dojo_server(lab: LabEnvironment, *, adapter: str = "claude") -> Any:
+    """Create the Dojo.ml tool server using the specified adapter.
 
     Args:
         lab: The LabEnvironment providing all backend services.
@@ -849,9 +849,9 @@ def create_agentml_server(lab: LabEnvironment, *, adapter: str = "claude") -> An
     tools = collect_all_tools(lab)
 
     if adapter == "claude":
-        from agentml.tools.adapters.claude import ClaudeToolAdapter
+        from dojo.tools.adapters.claude import ClaudeToolAdapter
 
-        return ClaudeToolAdapter().create_server("agentml", tools)
+        return ClaudeToolAdapter().create_server("dojo", tools)
     else:
         msg = f"Unknown tool adapter: {adapter}"
         raise ValueError(msg)
@@ -859,7 +859,7 @@ def create_agentml_server(lab: LabEnvironment, *, adapter: str = "claude") -> An
 
 def get_allowed_tool_names(
     lab: LabEnvironment,
-    server_name: str = "agentml",
+    server_name: str = "dojo",
     *,
     adapter: str = "claude",
 ) -> list[str]:
@@ -871,12 +871,12 @@ def get_allowed_tool_names(
         adapter: Which SDK adapter to use.
 
     Returns:
-        List of prefixed tool names (e.g. ["mcp__agentml__create_experiment", ...]).
+        List of prefixed tool names (e.g. ["mcp__dojo__create_experiment", ...]).
     """
     tools = collect_all_tools(lab)
 
     if adapter == "claude":
-        from agentml.tools.adapters.claude import ClaudeToolAdapter
+        from dojo.tools.adapters.claude import ClaudeToolAdapter
 
         return ClaudeToolAdapter().tool_names_prefixed(server_name, tools)
     else:
@@ -887,18 +887,18 @@ Usage (preview of v2, but useful for standalone testing now):
 
 ```python
 from claude_agent_sdk import query, ClaudeAgentOptions
-from agentml.api.deps import build_lab
-from agentml.config.settings import Settings
-from agentml.tools.server import create_agentml_server, get_allowed_tool_names
+from dojo.api.deps import build_lab
+from dojo.config.settings import Settings
+from dojo.tools.server import create_dojo_server, get_allowed_tool_names
 
 settings = Settings.load()
 lab = build_lab(settings)
 
-server = create_agentml_server(lab)
+server = create_dojo_server(lab)
 allowed = get_allowed_tool_names(lab)
 
 options = ClaudeAgentOptions(
-    mcp_servers={"agentml": server},
+    mcp_servers={"dojo": server},
     allowed_tools=[*allowed, "Bash", "Read", "Write"],
     permission_mode="acceptEdits",
     max_turns=50,
@@ -920,14 +920,14 @@ The `LabEnvironment` dataclass stays the same. Our tools receive `lab` via closu
 - **No** changes to `build_lab()`
 - **No** changes to existing tests
 
-The only change is the new `src/agentml/tools/` package that imports from existing modules.
+The only change is the new `src/dojo/tools/` package that imports from existing modules.
 
 ### Clean up `ToolRuntime` interface
 
 Since the `ToolDef` + adapter pattern supersedes `ToolRuntime`:
 
-1. Delete `src/agentml/interfaces/tool_runtime.py`
-2. Remove `ToolRuntime` from `src/agentml/interfaces/__init__.py` (if re-exported)
+1. Delete `src/dojo/interfaces/tool_runtime.py`
+2. Remove `ToolRuntime` from `src/dojo/interfaces/__init__.py` (if re-exported)
 
 ---
 
@@ -939,7 +939,7 @@ A script to validate the tools work end-to-end with a real Claude Code session.
 
 ```python
 #!/usr/bin/env python3
-"""Standalone test: run a simple ML task with AgentML tools via Claude Agent SDK."""
+"""Standalone test: run a simple ML task with Dojo.ml tools via Claude Agent SDK."""
 
 import asyncio
 
@@ -952,27 +952,27 @@ from claude_agent_sdk import (
     query,
 )
 
-from agentml.api.deps import build_lab
-from agentml.config.settings import Settings
-from agentml.tools.server import create_agentml_server, get_allowed_tool_names
-from agentml.utils.ids import generate_id
+from dojo.api.deps import build_lab
+from dojo.config.settings import Settings
+from dojo.tools.server import create_dojo_server, get_allowed_tool_names
+from dojo.utils.ids import generate_id
 
 
 async def main():
-    # Build lab with default settings (file-based storage in .agentml/)
+    # Build lab with default settings (file-based storage in .dojo/)
     settings = Settings.load()
     lab = build_lab(settings)
 
     # Create our MCP server via the Claude adapter
-    server = create_agentml_server(lab)  # defaults to adapter="claude"
+    server = create_dojo_server(lab)  # defaults to adapter="claude"
     allowed = get_allowed_tool_names(lab)
 
     task_id = generate_id()
 
     options = ClaudeAgentOptions(
-        mcp_servers={"agentml": server},
+        mcp_servers={"dojo": server},
         allowed_tools=[
-            *allowed,          # All AgentML tools
+            *allowed,          # All Dojo.ml tools
             "Bash",            # Claude Code built-ins
             "Read",
             "Write",
@@ -1031,15 +1031,15 @@ if __name__ == "__main__":
 
 | File | Purpose |
 |---|---|
-| `src/agentml/tools/__init__.py` | Package init — re-exports `ToolDef`, `ToolResult`, `ToolRegistry` |
-| `src/agentml/tools/base.py` | `ToolDef`, `ToolResult`, `ToolHandler`, `ToolRegistry` — the abstraction |
-| `src/agentml/tools/experiments.py` | Experiment tool definitions (6 `ToolDef`s) |
-| `src/agentml/tools/knowledge.py` | Knowledge tool definitions (3 `ToolDef`s) |
-| `src/agentml/tools/tracking.py` | Tracking tool definitions (2 `ToolDef`s) |
-| `src/agentml/tools/server.py` | `collect_all_tools()`, `create_agentml_server()`, `get_allowed_tool_names()` |
-| `src/agentml/tools/adapters/__init__.py` | Adapters package init |
-| `src/agentml/tools/adapters/base.py` | `ToolAdapter` ABC |
-| `src/agentml/tools/adapters/claude.py` | `ClaudeToolAdapter` — Claude Agent SDK adapter |
+| `src/dojo/tools/__init__.py` | Package init — re-exports `ToolDef`, `ToolResult`, `ToolRegistry` |
+| `src/dojo/tools/base.py` | `ToolDef`, `ToolResult`, `ToolHandler`, `ToolRegistry` — the abstraction |
+| `src/dojo/tools/experiments.py` | Experiment tool definitions (6 `ToolDef`s) |
+| `src/dojo/tools/knowledge.py` | Knowledge tool definitions (3 `ToolDef`s) |
+| `src/dojo/tools/tracking.py` | Tracking tool definitions (2 `ToolDef`s) |
+| `src/dojo/tools/server.py` | `collect_all_tools()`, `create_dojo_server()`, `get_allowed_tool_names()` |
+| `src/dojo/tools/adapters/__init__.py` | Adapters package init |
+| `src/dojo/tools/adapters/base.py` | `ToolAdapter` ABC |
+| `src/dojo/tools/adapters/claude.py` | `ClaudeToolAdapter` — Claude Agent SDK adapter |
 | `scripts/test_tools_standalone.py` | Standalone validation script |
 | `tests/unit/test_tool_base.py` | Unit tests for `ToolDef`, `ToolResult`, `ToolRegistry` |
 | `tests/unit/test_experiment_tools.py` | Unit tests for experiment tool handlers |
@@ -1057,7 +1057,7 @@ if __name__ == "__main__":
 
 | File | Reason |
 |---|---|
-| `src/agentml/interfaces/tool_runtime.py` | Superseded by `ToolDef` + adapter pattern |
+| `src/dojo/interfaces/tool_runtime.py` | Superseded by `ToolDef` + adapter pattern |
 
 ### Unchanged
 
@@ -1074,35 +1074,35 @@ Step 1 — Dependency setup                     ~15 min
 └── Verify import: python -c "from claude_agent_sdk import tool"
 
 Step 2 — Tool abstraction layer               ~30 min
-├── Create src/agentml/tools/__init__.py
-├── Create src/agentml/tools/base.py (ToolDef, ToolResult, ToolRegistry)
+├── Create src/dojo/tools/__init__.py
+├── Create src/dojo/tools/base.py (ToolDef, ToolResult, ToolRegistry)
 ├── Unit test ToolResult.to_text(), ToolRegistry.register()
-└── Delete src/agentml/interfaces/tool_runtime.py
+└── Delete src/dojo/interfaces/tool_runtime.py
 
 Step 3 — Adapter layer                        ~30 min
-├── Create src/agentml/tools/adapters/__init__.py
-├── Create src/agentml/tools/adapters/base.py (ToolAdapter ABC)
-├── Create src/agentml/tools/adapters/claude.py (ClaudeToolAdapter)
+├── Create src/dojo/tools/adapters/__init__.py
+├── Create src/dojo/tools/adapters/base.py (ToolAdapter ABC)
+├── Create src/dojo/tools/adapters/claude.py (ClaudeToolAdapter)
 └── Unit test adapter: ToolDef → Claude format round-trip
 
 Step 4 — Experiment tools                     ~45 min
-├── Create src/agentml/tools/experiments.py
+├── Create src/dojo/tools/experiments.py
 ├── 6 tools: create, complete, fail, get, list, compare
 └── Unit test each handler (returns ToolResult, no SDK deps)
 
 Step 5 — Knowledge tools                      ~30 min
-├── Create src/agentml/tools/knowledge.py
+├── Create src/dojo/tools/knowledge.py
 ├── 3 tools: write, search, list
 └── Unit tests
 
 Step 6 — Tracking tools                       ~20 min
-├── Create src/agentml/tools/tracking.py
+├── Create src/dojo/tools/tracking.py
 ├── 2 tools: log_metrics, log_params
 └── Unit tests
 
 Step 7 — Server factory                       ~15 min
-├── Create src/agentml/tools/server.py
-├── collect_all_tools(), create_agentml_server(), get_allowed_tool_names()
+├── Create src/dojo/tools/server.py
+├── collect_all_tools(), create_dojo_server(), get_allowed_tool_names()
 └── Verify all 11 tools collected
 
 Step 8 — Standalone validation                ~30 min
@@ -1147,8 +1147,8 @@ Tool handlers are just async functions returning `ToolResult`. Tests call them d
 # tests/unit/test_experiment_tools.py
 import json
 import pytest
-from agentml.tools.experiments import create_experiment_tools
-from agentml.tools.base import ToolResult
+from dojo.tools.experiments import create_experiment_tools
+from dojo.tools.base import ToolResult
 
 
 async def test_create_and_complete_experiment(lab):
@@ -1171,8 +1171,8 @@ async def test_create_and_complete_experiment(lab):
 
 ```python
 # tests/unit/test_claude_adapter.py
-from agentml.tools.base import ToolDef, ToolResult
-from agentml.tools.adapters.claude import ClaudeToolAdapter
+from dojo.tools.base import ToolDef, ToolResult
+from dojo.tools.adapters.claude import ClaudeToolAdapter
 
 
 async def test_claude_adapter_wraps_handler():

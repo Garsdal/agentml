@@ -2,8 +2,8 @@
 
 import pytest
 
-from agentml.tools.base import ToolResult
-from agentml.tools.experiments import create_experiment_tools
+from dojo.tools.base import ToolResult
+from dojo.tools.experiments import create_experiment_tools
 
 
 async def test_create_experiment(lab):

@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from agentml.tools.base import ToolDef, ToolResult
+from dojo.tools.base import ToolDef, ToolResult
 
 
 async def test_tool_result_to_claude_format():
@@ -31,19 +31,19 @@ def test_claude_adapter_tool_names_prefixed():
     We can test the prefixing logic directly since it doesn't use the SDK.
     """
     # Test the prefix format: mcp__<server>__<tool>
-    server_name = "agentml"
+    server_name = "dojo"
     tool_names = ["create_experiment", "log_metrics"]
     prefixed = [f"mcp__{server_name}__{name}" for name in tool_names]
     assert prefixed == [
-        "mcp__agentml__create_experiment",
-        "mcp__agentml__log_metrics",
+        "mcp__dojo__create_experiment",
+        "mcp__dojo__log_metrics",
     ]
 
 
 def test_claude_adapter_import():
     """Test that the adapter module can be imported (SDK itself may not be installed)."""
     try:
-        from agentml.tools.adapters.claude import ClaudeToolAdapter
+        from dojo.tools.adapters.claude import ClaudeToolAdapter
 
         adapter = ClaudeToolAdapter()
         assert hasattr(adapter, "adapt_tool")
@@ -57,7 +57,7 @@ def test_claude_adapter_import():
 def test_claude_adapter_prefixed_names():
     """Test tool_names_prefixed with actual adapter instance."""
     try:
-        from agentml.tools.adapters.claude import ClaudeToolAdapter
+        from dojo.tools.adapters.claude import ClaudeToolAdapter
     except ImportError:
         pytest.skip("claude_agent_sdk not installed")
 
@@ -70,8 +70,8 @@ def test_claude_adapter_prefixed_names():
         ToolDef(name="log_metrics", description="d", parameters={}, handler=noop_handler),
     ]
 
-    names = adapter.tool_names_prefixed("agentml", tool_defs)
+    names = adapter.tool_names_prefixed("dojo", tool_defs)
     assert names == [
-        "mcp__agentml__create_experiment",
-        "mcp__agentml__log_metrics",
+        "mcp__dojo__create_experiment",
+        "mcp__dojo__log_metrics",
     ]

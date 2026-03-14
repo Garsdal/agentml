@@ -1,8 +1,8 @@
-# AgentML Frontend Implementation Plan
+# Dojo.ml Frontend Implementation Plan
 
-> A React frontend for the AgentML experiment orchestration platform.
+> A React frontend for the Dojo.ml experiment orchestration platform.
 > Styled with shadcn/ui in a muted dark/grey/black/white palette.
-> Launched alongside the backend via `agentml start`.
+> Launched alongside the backend via `dojo start`.
 
 ---
 
@@ -10,7 +10,7 @@
 
 ### Goal
 
-Add a lightweight React dashboard that surfaces the full AgentML API:
+Add a lightweight React dashboard that surfaces the full Dojo.ml API:
 
 | API Endpoint | Purpose | Frontend View |
 |---|---|---|
@@ -235,7 +235,7 @@ Same pattern for `use-experiments.ts`, `use-knowledge.ts`, `use-health.ts`.
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│  ● AgentML                               ● Health: OK  │  ← Header
+│  ● Dojo.ml                               ● Health: OK  │  ← Header
 ├──────────┬─────────────────────────────────────────────┤
 │          │                                             │
 │  Tasks   │           Main Content Area                 │
@@ -247,7 +247,7 @@ Same pattern for `use-experiments.ts`, `use-knowledge.ts`, `use-health.ts`.
    Sidebar                  Outlet
 ```
 
-- **Header**: Logo text "AgentML" + version + green/red health dot
+- **Header**: Logo text "Dojo.ml" + version + green/red health dot
 - **Sidebar**: 3 nav items, vertical, `w-56`, collapsible on mobile
 - **Main**: React Router `<Outlet />`
 
@@ -300,7 +300,7 @@ Four summary cards in a 2×2 grid:
 
 The React dev server runs on `localhost:5173`, the API on `localhost:8000`. We need CORS.
 
-**File: `src/agentml/api/app.py`**
+**File: `src/dojo/api/app.py`**
 
 Add `fastapi.middleware.cors.CORSMiddleware`:
 
@@ -338,7 +338,7 @@ This is optional for v1 — dev mode uses Vite's proxy.
 
 Add a new endpoint to expose configuration to the frontend:
 
-**File: `src/agentml/api/routers/config.py`** (new)
+**File: `src/dojo/api/routers/config.py`** (new)
 
 ```python
 @router.get("/config")
@@ -365,11 +365,11 @@ class FrontendSettings(BaseSettings):
 
 ---
 
-## 8. CLI Changes — `agentml start`
+## 8. CLI Changes — `dojo start`
 
 ### 8.1 Launch Both Servers
 
-Modify `src/agentml/cli/start.py` to:
+Modify `src/dojo/cli/start.py` to:
 
 1. Start the Vite dev server (or serve built files) as a subprocess
 2. Start the uvicorn backend
@@ -382,16 +382,16 @@ Using `rich` (already a dependency), the banner will look like this:
 ```
   ┌─────────────────────────────────────────────────────┐
   │                                                     │
-  │   AgentML v0.1.0                                    │
+  │   Dojo.ml v0.1.0                                    │
   │                                                     │
   │   ● Backend API    http://127.0.0.1:8000            │
   │   ● API Docs       http://127.0.0.1:8000/docs       │
   │   ● Frontend       http://localhost:5173             │
-  │   ● Storage        .agentml/                         │
-  │   ● Config         .agentml/config.yaml              │
-  │   ● Experiments    .agentml/experiments/              │
-  │   ● Artifacts      .agentml/artifacts/               │
-  │   ● Knowledge      .agentml/memory/                  │
+  │   ● Storage        .dojo/                         │
+  │   ● Config         .dojo/config.yaml              │
+  │   ● Experiments    .dojo/experiments/              │
+  │   ● Artifacts      .dojo/artifacts/               │
+  │   ● Knowledge      .dojo/memory/                  │
   │                                                     │
   │   Press Ctrl+C to stop all services.                │
   │                                                     │
@@ -402,7 +402,7 @@ Colors (via Rich markup):
 
 | Element | Color |
 |---|---|
-| `AgentML` | `bold cyan` |
+| `Dojo.ml` | `bold cyan` |
 | Version | `dim white` |
 | Bullets (●) | `green` when running |
 | URLs | `bold white underline` |
@@ -413,7 +413,7 @@ Colors (via Rich markup):
 ### 8.3 Implementation Detail
 
 ```python
-# src/agentml/cli/start.py
+# src/dojo/cli/start.py
 
 import subprocess
 import signal
@@ -540,10 +540,10 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 | Step | Task | Files |
 |---|---|---|
-| 14 | Add CORS middleware to FastAPI | `src/agentml/api/app.py` |
-| 15 | Add `/config` endpoint | `src/agentml/api/routers/config.py` |
-| 16 | Add `FrontendSettings` to config | `src/agentml/config/settings.py`, `defaults.py` |
-| 17 | Update `agentml start` to launch frontend + colorful banner | `src/agentml/cli/start.py`, `src/agentml/cli/main.py` |
+| 14 | Add CORS middleware to FastAPI | `src/dojo/api/app.py` |
+| 15 | Add `/config` endpoint | `src/dojo/api/routers/config.py` |
+| 16 | Add `FrontendSettings` to config | `src/dojo/config/settings.py`, `defaults.py` |
+| 17 | Update `dojo start` to launch frontend + colorful banner | `src/dojo/cli/start.py`, `src/dojo/cli/main.py` |
 
 ### Phase 5 — Polish (Steps 18–20)
 
@@ -572,7 +572,7 @@ frontend-build:
 dev-all: dev
 	@echo "Starting frontend..."
 	cd frontend && npm run dev &
-	uv run agentml start
+	uv run dojo start
 ```
 
 ---
@@ -638,7 +638,7 @@ export interface AppConfig {
 ```tsx
 <header className="flex items-center justify-between h-14 px-6 border-b bg-background">
   <div className="flex items-center gap-2">
-    <span className="text-lg font-bold tracking-tight">AgentML</span>
+    <span className="text-lg font-bold tracking-tight">Dojo.ml</span>
     <Badge variant="outline" className="text-xs font-mono">v0.1.0</Badge>
   </div>
   <div className="flex items-center gap-2">
@@ -742,17 +742,17 @@ export interface AppConfig {
 | File | Purpose |
 |---|---|
 | `frontend/` (entire directory) | React application |
-| `src/agentml/api/routers/config.py` | Config endpoint for frontend |
+| `src/dojo/api/routers/config.py` | Config endpoint for frontend |
 
 ### Modified Files
 
 | File | Change |
 |---|---|
-| `src/agentml/api/app.py` | Add CORS middleware, register config router, optional static mount |
-| `src/agentml/config/settings.py` | Add `FrontendSettings` |
-| `src/agentml/config/defaults.py` | Add frontend defaults |
-| `src/agentml/cli/start.py` | Launch frontend subprocess + colorful banner |
-| `src/agentml/cli/main.py` | Add `--no-frontend` flag |
+| `src/dojo/api/app.py` | Add CORS middleware, register config router, optional static mount |
+| `src/dojo/config/settings.py` | Add `FrontendSettings` |
+| `src/dojo/config/defaults.py` | Add frontend defaults |
+| `src/dojo/cli/start.py` | Launch frontend subprocess + colorful banner |
+| `src/dojo/cli/main.py` | Add `--no-frontend` flag |
 | `Makefile` | Add frontend targets |
 | `.gitignore` | Add `frontend/node_modules`, `frontend/dist` |
 
@@ -762,7 +762,7 @@ export interface AppConfig {
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│  $ agentml start                                       │
+│  $ dojo start                                       │
 │                                                        │
 │  1. Load Settings                                      │
 │  2. Check if frontend/package.json exists              │
@@ -787,7 +787,7 @@ def print_startup_banner(settings, frontend_running=False):
     
     lines = Text()
     lines.append("\n")
-    lines.append("  AgentML", style="bold cyan")
+    lines.append("  Dojo.ml", style="bold cyan")
     lines.append(f" v{__version__}\n\n", style="dim")
     
     host = settings.api.host
@@ -843,8 +843,8 @@ def print_startup_banner(settings, frontend_running=False):
 ## 19. Acceptance Criteria
 
 1. `cd frontend && npm install && npm run dev` starts the React dev server on `:5173`
-2. `agentml start` launches both backend (`:8000`) and frontend (`:5173`) with a colorful Rich banner
-3. `agentml start --no-frontend` launches backend only (existing behavior)
+2. `dojo start` launches both backend (`:8000`) and frontend (`:5173`) with a colorful Rich banner
+3. `dojo start --no-frontend` launches backend only (existing behavior)
 4. Dashboard shows task/experiment/knowledge counts
 5. Tasks page can create a new task and display the result
 6. Experiments page lists experiments with state badges and metrics

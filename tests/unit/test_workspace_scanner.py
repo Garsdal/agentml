@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from agentml.runtime.workspace_scanner import WorkspaceScanner
+from dojo.runtime.workspace_scanner import WorkspaceScanner
 
 
 @pytest.fixture

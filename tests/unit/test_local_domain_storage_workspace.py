@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from agentml.core.domain import Domain, DomainTool, Workspace, WorkspaceSource
-from agentml.storage.local import LocalDomainStore
+from dojo.core.domain import Domain, DomainTool, Workspace, WorkspaceSource
+from dojo.storage.local import LocalDomainStore
 
 
 async def test_domain_with_workspace_roundtrip(tmp_path: Path):

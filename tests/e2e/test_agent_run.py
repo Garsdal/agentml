@@ -15,7 +15,7 @@ async def agent_client(agent_settings):
     """Async HTTP client configured with stub agent backend."""
     from httpx import ASGITransport, AsyncClient
 
-    from agentml.api.app import create_app
+    from dojo.api.app import create_app
 
     app = create_app(agent_settings)
     transport = ASGITransport(app=app)

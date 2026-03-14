@@ -1,0 +1,110 @@
+"""Application settings — Pydantic Settings with YAML + env var support."""
+
+from pathlib import Path
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class APISettings(BaseSettings):
+    """API server configuration."""
+
+    host: str = "127.0.0.1"
+    port: int = 8000
+
+
+class LLMSettings(BaseSettings):
+    """LLM provider configuration."""
+
+    provider: str = "stub"
+    model: str = "stub"
+    api_key: str = ""
+
+
+class SandboxSettings(BaseSettings):
+    """Sandbox execution configuration."""
+
+    timeout: float = 30.0
+
+
+class StorageSettings(BaseSettings):
+    """Storage configuration."""
+
+    base_dir: Path = Path(".dojo")
+
+
+class TrackingSettings(BaseSettings):
+    """Experiment tracking configuration."""
+
+    backend: str = "file"  # "file" | "mlflow"
+    enabled: bool = True
+
+    # MLflow-specific
+    mlflow_tracking_uri: str = "file:./mlruns"  # MLflow tracking server URI
+    mlflow_experiment_name: str = "dojo"  # Default experiment name
+    mlflow_artifact_location: str | None = None  # Override artifact root (optional)
+
+
+class MemorySettings(BaseSettings):
+    """Knowledge memory configuration."""
+
+    backend: str = "local"  # "local" (future: "vector", "postgres")
+    search_limit: int = 10  # Default number of results from search
+
+
+class FrontendSettings(BaseSettings):
+    """Frontend dev server configuration."""
+
+    enabled: bool = True
+    port: int = 5173
+
+
+class AgentSettings(BaseSettings):
+    """Agent execution configuration."""
+
+    backend: str = "claude"  # Which AgentBackend to use ("claude", "stub")
+    max_turns: int = 50  # Max tool-use round trips
+    max_budget_usd: float | None = None  # Max spend per run (None = unlimited)
+    permission_mode: str = "acceptEdits"  # Permission mode (backend-specific)
+    cwd: str | None = None  # Working directory for code execution
+
+
+class Settings(BaseSettings):
+    """Root application settings.
+
+    Loads from environment variables with DOJO_ prefix,
+    and from .dojo/config.yaml if present.
+    """
+
+    model_config = SettingsConfigDict(
+        env_prefix="DOJO_",
+        env_nested_delimiter="__",
+    )
+
+    api: APISettings = Field(default_factory=APISettings)
+    llm: LLMSettings = Field(default_factory=LLMSettings)
+    sandbox: SandboxSettings = Field(default_factory=SandboxSettings)
+    storage: StorageSettings = Field(default_factory=StorageSettings)
+    tracking: TrackingSettings = Field(default_factory=TrackingSettings)
+    frontend: FrontendSettings = Field(default_factory=FrontendSettings)
+    memory: MemorySettings = Field(default_factory=MemorySettings)
+    agent: AgentSettings = Field(default_factory=AgentSettings)
+
+    @classmethod
+    def load(cls, config_path: Path | None = None) -> "Settings":
+        """Load settings, optionally from a YAML config file.
+
+        Args:
+            config_path: Path to a YAML config file. Defaults to .dojo/config.yaml.
+
+        Returns:
+            Populated Settings instance.
+        """
+        import yaml
+
+        path = config_path or Path(".dojo/config.yaml")
+        if path.exists():
+            with open(path) as f:
+                data = yaml.safe_load(f) or {}
+            return cls(**data)
+        return cls()

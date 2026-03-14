@@ -2,7 +2,7 @@ Great — the key requirement you stated is **the correct one**:
 
 > clearly separate *agent*, *compute*, *storage*, *memory*, *experiment environment*, so the runtime can later swap **local / MLflow / Modal / Postgres / Ray / etc.**
 
-What we want is essentially a **hexagonal architecture (ports & adapters)** for AgentML.
+What we want is essentially a **hexagonal architecture (ports & adapters)** for Dojo.ml.
 
 That means:
 
@@ -32,7 +32,7 @@ Below is a **complete interface structure** you can implement directly.
 # High-Level Architecture
 
 ```
-agentml/
+dojo/
 
 core/                # pure domain logic
     experiment.py
@@ -205,7 +205,7 @@ Later options:
 
 from abc import ABC, abstractmethod
 from typing import List
-from agentml.core.experiment import Experiment
+from dojo.core.experiment import Experiment
 
 
 class ExperimentStore(ABC):
@@ -319,10 +319,10 @@ Everything is injected.
 ```python
 # runtime/lab_environment.py
 
-from agentml.interfaces.compute import ComputeBackend
-from agentml.interfaces.experiment_store import ExperimentStore
-from agentml.interfaces.artifact_store import ArtifactStore
-from agentml.interfaces.memory_store import MemoryStore
+from dojo.interfaces.compute import ComputeBackend
+from dojo.interfaces.experiment_store import ExperimentStore
+from dojo.interfaces.artifact_store import ArtifactStore
+from dojo.interfaces.memory_store import MemoryStore
 
 
 class LabEnvironment:
@@ -352,7 +352,7 @@ This executes experiments **using the environment**.
 ```python
 # runtime/experiment_service.py
 
-from agentml.core.experiment import Experiment
+from dojo.core.experiment import Experiment
 
 
 class ExperimentService:
@@ -397,7 +397,7 @@ class ExperimentService:
 ```python
 # compute/local_compute.py
 
-from agentml.interfaces.compute import ComputeBackend
+from dojo.interfaces.compute import ComputeBackend
 
 
 class LocalCompute(ComputeBackend):
@@ -417,8 +417,8 @@ class LocalCompute(ComputeBackend):
 import json
 from pathlib import Path
 
-from agentml.interfaces.experiment_store import ExperimentStore
-from agentml.core.experiment import Experiment
+from dojo.interfaces.experiment_store import ExperimentStore
+from dojo.core.experiment import Experiment
 
 
 class LocalExperimentStore(ExperimentStore):
@@ -454,7 +454,7 @@ The Claude Agent SDK becomes **one implementation of Agent**.
 ```python
 # agents/claude_agent.py
 
-from agentml.interfaces.agent import Agent
+from dojo.interfaces.agent import Agent
 
 
 class ClaudeResearchAgent(Agent):
@@ -530,7 +530,7 @@ Without this separation:
 
 With this architecture:
 
-AgentML becomes:
+Dojo.ml becomes:
 
 > **an operating system for ML research**
 
@@ -569,7 +569,7 @@ autonomous ML researcher
 
 If you'd like, I can also show the **next critical layer**:
 
-**the AgentML "Scientific Method Engine"**
+**the Dojo.ml "Scientific Method Engine"**
 
 which forces agents to:
 

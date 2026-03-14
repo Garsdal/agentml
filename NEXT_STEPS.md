@@ -15,8 +15,8 @@ The `Task` model was the original unit of work before domains were introduced. C
 ### Files to Delete
 | File | Reason |
 |---|---|
-| `src/agentml/core/task.py` | `Task`, `TaskPlan`, `TaskResult`, `TaskStatus` — unused by domains |
-| `src/agentml/api/routers/tasks.py` | Full task router with in-memory `_tasks` dict |
+| `src/dojo/core/task.py` | `Task`, `TaskPlan`, `TaskResult`, `TaskStatus` — unused by domains |
+| `src/dojo/api/routers/tasks.py` | Full task router with in-memory `_tasks` dict |
 | `frontend/src/hooks/use-tasks.ts` | SWR hooks for `/tasks` endpoints |
 | `frontend/src/pages/tasks.tsx` | Legacy tasks page (already unrouted) |
 | `frontend/src/pages/dashboard.tsx` | Old dashboard (already unrouted) |
@@ -25,10 +25,10 @@ The `Task` model was the original unit of work before domains were introduced. C
 
 ### Files to Modify
 
-**`src/agentml/api/app.py`**
-- Remove `from agentml.api.routers import tasks` and `app.include_router(tasks.router)`.
+**`src/dojo/api/app.py`**
+- Remove `from dojo.api.routers import tasks` and `app.include_router(tasks.router)`.
 
-**`src/agentml/agents/orchestrator.py`**
+**`src/dojo/agents/orchestrator.py`**
 - Remove `task_id` parameter from `start()`. Signature becomes:
   ```python
   async def start(self, prompt: str, *, domain_id: str) -> AgentRun:
@@ -204,11 +204,11 @@ class LinkType(str, Enum):
 ### New Interface
 
 ```python
-# src/agentml/interfaces/knowledge_linker.py
+# src/dojo/interfaces/knowledge_linker.py
 
 from abc import ABC, abstractmethod
-from agentml.core.knowledge import KnowledgeAtom
-from agentml.core.knowledge_link import KnowledgeLink
+from dojo.core.knowledge import KnowledgeAtom
+from dojo.core.knowledge_link import KnowledgeLink
 
 class KnowledgeLinker(ABC):
     """Port for knowledge-linking strategies."""
@@ -236,8 +236,8 @@ class KnowledgeLinker(ABC):
 
 | Implementation | Location | Strategy |
 |---|---|---|
-| `KeywordKnowledgeLinker` | `src/agentml/runtime/keyword_linker.py` | Current 40% word overlap (default) |
-| `AgenticKnowledgeLinker` | `src/agentml/runtime/agentic_linker.py` (future) | Uses LLM to judge semantic similarity |
+| `KeywordKnowledgeLinker` | `src/dojo/runtime/keyword_linker.py` | Current 40% word overlap (default) |
+| `AgenticKnowledgeLinker` | `src/dojo/runtime/agentic_linker.py` (future) | Uses LLM to judge semantic similarity |
 
 ### Wiring
 
@@ -248,7 +248,7 @@ knowledge_linker: KnowledgeLinker
 
 **`build_lab()` in `deps.py`** constructs the linker once:
 ```python
-from agentml.runtime.keyword_linker import KeywordKnowledgeLinker
+from dojo.runtime.keyword_linker import KeywordKnowledgeLinker
 
 knowledge_linker=KeywordKnowledgeLinker(memory_store, knowledge_link_store)
 ```
@@ -340,7 +340,7 @@ storage/
    )
    ```
 5. **Update imports** throughout the codebase. Key files:
-   - `api/deps.py` — `from agentml.storage.local import ...` (or `from agentml.storage.local.experiment import ...`)
+   - `api/deps.py` — `from dojo.storage.local import ...` (or `from dojo.storage.local.experiment import ...`)
    - All test files that import storage adapters directly.
 
 ### Future Backend Pattern
@@ -355,9 +355,9 @@ from .domain import SupabaseDomainStore
 ```python
 # api/deps.py — build_lab dispatches on config
 if settings.storage.backend == "local":
-    from agentml.storage.local import LocalExperimentStore as ExperimentStoreImpl
+    from dojo.storage.local import LocalExperimentStore as ExperimentStoreImpl
 elif settings.storage.backend == "supabase":
-    from agentml.storage.supabase import SupabaseExperimentStore as ExperimentStoreImpl
+    from dojo.storage.supabase import SupabaseExperimentStore as ExperimentStoreImpl
 ```
 
 This requires adding `backend: str = "local"` to `StorageSettings`.
@@ -365,7 +365,7 @@ This requires adding `backend: str = "local"` to `StorageSettings`.
 ### Validation
 - `just test` — all tests pass after import updates.
 - `just lint` — no import errors.
-- Verify `from agentml.storage import LocalExperimentStore` still works (backward compat re-export).
+- Verify `from dojo.storage import LocalExperimentStore` still works (backward compat re-export).
 
 ---
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentml.tracking.mlflow_tracker import MlflowTracker
+from dojo.tracking.mlflow_tracker import MlflowTracker
 
 
 @pytest.fixture

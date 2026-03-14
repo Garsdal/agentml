@@ -2,8 +2,8 @@
 
 import pytest
 
-from agentml.core.domain import Domain, DomainTool, ToolType
-from agentml.tools.tool_generation import (
+from dojo.core.domain import Domain, DomainTool, ToolType
+from dojo.tools.tool_generation import (
     build_tool_generation_prompt,
     dicts_to_domain_tools,
     parse_generated_tools,

@@ -1,6 +1,6 @@
 # MLflow + Memory Store — Detailed Implementation Plan
 
-**Scope:** Wire MLflow (≥ 3.0) as a first-class tracking backend alongside the existing `FileTracker`, properly wire the local `MemoryStore`, make both configurable via `config.yaml` / env vars, and connect everything through `agentml start`. Includes comprehensive testing.
+**Scope:** Wire MLflow (≥ 3.0) as a first-class tracking backend alongside the existing `FileTracker`, properly wire the local `MemoryStore`, make both configurable via `config.yaml` / env vars, and connect everything through `dojo start`. Includes comprehensive testing.
 
 ---
 
@@ -16,7 +16,7 @@
 | `TrackingSettings` | ⚠️ Bare | Only `enabled: bool` — no backend selector, no MLflow URI |
 | Memory config | ❌ Missing | No `MemorySettings` in settings |
 | `build_lab()` | ⚠️ Hardcoded | Always creates `FileTracker` + `LocalMemoryStore` — no config dispatch |
-| `agentml start` | ⚠️ Partial | Starts FastAPI only — no MLflow server, no banner info for tracking/memory |
+| `dojo start` | ⚠️ Partial | Starts FastAPI only — no MLflow server, no banner info for tracking/memory |
 | Tests | ❌ Missing | Zero test files |
 
 ---
@@ -51,7 +51,7 @@ StubAgent / ExperimentService uses lab.tracking + lab.memory_store
 
 ### A1. Expand `TrackingSettings`
 
-**File:** `src/agentml/config/settings.py`
+**File:** `src/dojo/config/settings.py`
 
 ```python
 class TrackingSettings(BaseSettings):
@@ -61,15 +61,15 @@ class TrackingSettings(BaseSettings):
 
     # MLflow-specific
     mlflow_tracking_uri: str = "file:./mlruns"   # MLflow tracking server URI
-    mlflow_experiment_name: str = "agentml"      # Default experiment name
+    mlflow_experiment_name: str = "dojo"      # Default experiment name
     mlflow_artifact_location: str | None = None  # Override artifact root (optional)
 ```
 
-**Env vars:** `AGENTML_TRACKING__BACKEND=mlflow`, `AGENTML_TRACKING__MLFLOW_TRACKING_URI=http://localhost:5000`
+**Env vars:** `DOJO_TRACKING__BACKEND=mlflow`, `DOJO_TRACKING__MLFLOW_TRACKING_URI=http://localhost:5000`
 
 ### A2. Add `MemorySettings`
 
-**File:** `src/agentml/config/settings.py`
+**File:** `src/dojo/config/settings.py`
 
 ```python
 class MemorySettings(BaseSettings):
@@ -97,7 +97,7 @@ DEFAULTS = {
         "backend": "file",
         "enabled": True,
         "mlflow_tracking_uri": "file:./mlruns",
-        "mlflow_experiment_name": "agentml",
+        "mlflow_experiment_name": "dojo",
     },
     "memory": {
         "backend": "local",
@@ -108,7 +108,7 @@ DEFAULTS = {
 
 ### A4. Update `config init` template
 
-**File:** `src/agentml/cli/config.py`
+**File:** `src/dojo/cli/config.py`
 
 Add tracking and memory sections to the default YAML template:
 
@@ -117,7 +117,7 @@ tracking:
   backend: "file"             # "file" or "mlflow"
   enabled: true
   mlflow_tracking_uri: "file:./mlruns"
-  mlflow_experiment_name: "agentml"
+  mlflow_experiment_name: "dojo"
 
 memory:
   backend: "local"
@@ -149,7 +149,7 @@ MLflow is an **optional dependency** — imported lazily. The system falls back 
 
 ### B2. Create `MlflowTracker`
 
-**File:** `src/agentml/tracking/mlflow_tracker.py`
+**File:** `src/dojo/tracking/mlflow_tracker.py`
 
 ```python
 """MLflow-based tracking connector — logs to MLflow Tracking."""
@@ -158,8 +158,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentml.interfaces.tracking import TrackingConnector
-from agentml.utils.logging import get_logger
+from dojo.interfaces.tracking import TrackingConnector
+from dojo.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -167,14 +167,14 @@ logger = get_logger(__name__)
 class MlflowTracker(TrackingConnector):
     """Tracks experiments using MLflow >= 3.0.
 
-    Maps AgentML experiment IDs to MLflow runs inside a single MLflow experiment.
-    Each AgentML experiment gets its own MLflow run, keyed by experiment_id tag.
+    Maps Dojo.ml experiment IDs to MLflow runs inside a single MLflow experiment.
+    Each Dojo.ml experiment gets its own MLflow run, keyed by experiment_id tag.
     """
 
     def __init__(
         self,
         tracking_uri: str = "file:./mlruns",
-        experiment_name: str = "agentml",
+        experiment_name: str = "dojo",
         artifact_location: str | None = None,
     ) -> None:
         import mlflow
@@ -195,7 +195,7 @@ class MlflowTracker(TrackingConnector):
 
         self._experiment_name = experiment_name
 
-        # Cache: agentml_experiment_id → mlflow_run_id
+        # Cache: dojo_experiment_id → mlflow_run_id
         self._run_cache: dict[str, str] = {}
 
         logger.info(
@@ -215,7 +215,7 @@ class MlflowTracker(TrackingConnector):
 
         runs = self._client.search_runs(
             experiment_ids=[self._experiment_id],
-            filter_string=f'tags."agentml.experiment_id" = "{experiment_id}"',
+            filter_string=f'tags."dojo.experiment_id" = "{experiment_id}"',
             max_results=1,
         )
         if runs:
@@ -223,7 +223,7 @@ class MlflowTracker(TrackingConnector):
         else:
             run = self._client.create_run(
                 self._experiment_id,
-                tags={"agentml.experiment_id": experiment_id},
+                tags={"dojo.experiment_id": experiment_id},
             )
             run_id = run.info.run_id
 
@@ -269,7 +269,7 @@ class MlflowTracker(TrackingConnector):
 
 **Key design decisions:**
 
-1. **One MLflow experiment, many runs:** All AgentML experiments map to runs within a single MLflow experiment (named by `mlflow_experiment_name`). Each run is tagged with `agentml.experiment_id`.
+1. **One MLflow experiment, many runs:** All Dojo.ml experiments map to runs within a single MLflow experiment (named by `mlflow_experiment_name`). Each run is tagged with `dojo.experiment_id`.
 2. **Run caching:** Avoids repeated `search_runs` calls by caching the mapping in-memory.
 3. **Lazy import:** `import mlflow` happens inside `__init__` — if mlflow is not installed, the error surfaces at construction time, not at import time.
 4. **Param flattening:** MLflow params must be strings and don't support nesting; nested dicts are flattened with dot-notation.
@@ -278,7 +278,7 @@ class MlflowTracker(TrackingConnector):
 
 Add a `close()` method for clean shutdown:
 
-**File:** `src/agentml/interfaces/tracking.py`
+**File:** `src/dojo/interfaces/tracking.py`
 
 ```python
 class TrackingConnector(ABC):
@@ -297,22 +297,22 @@ The `MlflowTracker` can use this to end any active runs on shutdown. The `FileTr
 
 ### C1. Update `build_lab()`
 
-**File:** `src/agentml/api/deps.py`
+**File:** `src/dojo/api/deps.py`
 
 ```python
 """Dependency builder — constructs LabEnvironment from settings."""
 
 from pathlib import Path
 
-from agentml.config.settings import Settings
-from agentml.runtime.lab import LabEnvironment
-from agentml.compute.local import LocalCompute
-from agentml.sandbox.local import LocalSandbox
-from agentml.storage.local_artifact import LocalArtifactStore
-from agentml.storage.local_experiment import LocalExperimentStore
-from agentml.interfaces.tracking import TrackingConnector
-from agentml.interfaces.memory_store import MemoryStore
-from agentml.utils.logging import get_logger
+from dojo.config.settings import Settings
+from dojo.runtime.lab import LabEnvironment
+from dojo.compute.local import LocalCompute
+from dojo.sandbox.local import LocalSandbox
+from dojo.storage.local_artifact import LocalArtifactStore
+from dojo.storage.local_experiment import LocalExperimentStore
+from dojo.interfaces.tracking import TrackingConnector
+from dojo.interfaces.memory_store import MemoryStore
+from dojo.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -320,7 +320,7 @@ logger = get_logger(__name__)
 def _build_tracking(settings: Settings) -> TrackingConnector:
     """Build tracking connector from settings."""
     if not settings.tracking.enabled:
-        from agentml.tracking.noop_tracker import NoopTracker
+        from dojo.tracking.noop_tracker import NoopTracker
         logger.info("tracking_disabled")
         return NoopTracker()
 
@@ -328,11 +328,11 @@ def _build_tracking(settings: Settings) -> TrackingConnector:
 
     if backend == "mlflow":
         try:
-            from agentml.tracking.mlflow_tracker import MlflowTracker
+            from dojo.tracking.mlflow_tracker import MlflowTracker
         except ImportError as e:
             raise ImportError(
                 "MLflow is required for tracking.backend='mlflow'. "
-                "Install it with: pip install agentml[mlflow]"
+                "Install it with: pip install dojo[mlflow]"
             ) from e
         logger.info("tracking_backend", backend="mlflow", uri=settings.tracking.mlflow_tracking_uri)
         return MlflowTracker(
@@ -342,7 +342,7 @@ def _build_tracking(settings: Settings) -> TrackingConnector:
         )
 
     if backend == "file":
-        from agentml.tracking.file_tracker import FileTracker
+        from dojo.tracking.file_tracker import FileTracker
         base = Path(settings.storage.base_dir) / "tracking"
         logger.info("tracking_backend", backend="file", path=str(base))
         return FileTracker(base_dir=base)
@@ -355,7 +355,7 @@ def _build_memory(settings: Settings) -> MemoryStore:
     backend = settings.memory.backend
 
     if backend == "local":
-        from agentml.storage.local_memory import LocalMemoryStore
+        from dojo.storage.local_memory import LocalMemoryStore
         base = Path(settings.storage.base_dir) / "memory"
         logger.info("memory_backend", backend="local", path=str(base))
         return LocalMemoryStore(base_dir=base)
@@ -380,13 +380,13 @@ def build_lab(settings: Settings) -> LabEnvironment:
 
 For when `tracking.enabled = false` — a do-nothing implementation.
 
-**File:** `src/agentml/tracking/noop_tracker.py`
+**File:** `src/dojo/tracking/noop_tracker.py`
 
 ```python
 """No-op tracking connector — used when tracking is disabled."""
 
 from typing import Any
-from agentml.interfaces.tracking import TrackingConnector
+from dojo.interfaces.tracking import TrackingConnector
 
 
 class NoopTracker(TrackingConnector):
@@ -412,20 +412,20 @@ class NoopTracker(TrackingConnector):
 
 ## Phase D — CLI & Startup Wiring
 
-### D1. Enhance `agentml start` Banner
+### D1. Enhance `dojo start` Banner
 
-**File:** `src/agentml/cli/start.py`
+**File:** `src/dojo/cli/start.py`
 
 The start command should display which backends are active:
 
 ```
-$ agentml start
+$ dojo start
 
-  AgentML v0.1.0
+  Dojo.ml v0.1.0
   ✓ FastAPI server  → http://127.0.0.1:8000
   ✓ API docs        → http://127.0.0.1:8000/docs
   ✓ Tracking        → mlflow (uri: file:./mlruns)
-  ✓ Memory store    → local (.agentml/memory)
+  ✓ Memory store    → local (.dojo/memory)
 
   Press Ctrl+C to stop.
 ```
@@ -435,9 +435,9 @@ Implementation: Read `settings.tracking.backend` and `settings.memory.backend` a
 ```python
 def start(host: str, port: int) -> None:
     import uvicorn
-    from agentml.api.app import create_app
-    from agentml.config.settings import Settings
-    from agentml.utils.logging import setup_logging
+    from dojo.api.app import create_app
+    from dojo.config.settings import Settings
+    from dojo.utils.logging import setup_logging
 
     setup_logging()
     settings = Settings.load()
@@ -445,7 +445,7 @@ def start(host: str, port: int) -> None:
     settings.api.port = port
 
     console.print()
-    console.print(f"  [bold cyan]AgentML[/bold cyan] v{__version__}")
+    console.print(f"  [bold cyan]Dojo.ml[/bold cyan] v{__version__}")
     console.print(f"  ✓ FastAPI server  → http://{host}:{port}")
     console.print(f"  ✓ API docs        → http://{host}:{port}/docs")
 
@@ -475,7 +475,7 @@ def start(host: str, port: int) -> None:
 
 Register a shutdown event on the FastAPI app to call `tracking.close()`:
 
-**File:** `src/agentml/api/app.py`
+**File:** `src/dojo/api/app.py`
 
 ```python
 from contextlib import asynccontextmanager
@@ -494,7 +494,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings = Settings.load()
 
     app = FastAPI(
-        title="AgentML",
+        title="Dojo.ml",
         description="AI-powered experiment orchestration",
         version=__version__,
         lifespan=lifespan,
@@ -510,12 +510,12 @@ Currently the `StubAgent` logs metrics and params via `lab.tracking` but does **
 
 ### E1. StubAgent writes knowledge atoms
 
-**File:** `src/agentml/agents/stub_agent.py`
+**File:** `src/dojo/agents/stub_agent.py`
 
 After completing the experiment, the stub agent should also create a `KnowledgeAtom` and store it:
 
 ```python
-from agentml.core.knowledge import KnowledgeAtom
+from dojo.core.knowledge import KnowledgeAtom
 
 # ... inside run(), after experiment completes:
 
@@ -546,7 +546,7 @@ The knowledge routes already exist and work (`GET /knowledge`, `GET /knowledge/r
 
 ### F1. POST /knowledge — create a knowledge atom
 
-**File:** `src/agentml/api/routers/knowledge.py`
+**File:** `src/dojo/api/routers/knowledge.py`
 
 ```python
 class CreateKnowledgeRequest(BaseModel):
@@ -590,13 +590,13 @@ async def delete_knowledge(atom_id: str, request: Request) -> None:
 
 New router for querying tracked metrics:
 
-**File:** `src/agentml/api/routers/tracking.py`
+**File:** `src/dojo/api/routers/tracking.py`
 
 ```python
 """Tracking router — query tracked metrics."""
 
 from fastapi import APIRouter, Request
-from agentml.runtime.lab import LabEnvironment
+from dojo.runtime.lab import LabEnvironment
 
 router = APIRouter(prefix="/tracking", tags=["tracking"])
 
@@ -614,7 +614,7 @@ async def get_tracked_metrics(experiment_id: str, request: Request) -> dict[str,
 Register in `app.py`:
 
 ```python
-from agentml.api.routers import experiments, health, knowledge, tasks, tracking
+from dojo.api.routers import experiments, health, knowledge, tasks, tracking
 
 app.include_router(tracking.router)
 ```
@@ -658,8 +658,8 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from agentml.api.app import create_app
-from agentml.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
+from dojo.api.app import create_app
+from dojo.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
 
 
 @pytest.fixture
@@ -672,7 +672,7 @@ def tmp_dir(tmp_path: Path) -> Path:
 def settings(tmp_dir: Path) -> Settings:
     """Settings pointing at a temp directory."""
     return Settings(
-        storage=StorageSettings(base_dir=tmp_dir / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_dir / ".dojo"),
         tracking=TrackingSettings(backend="file", enabled=True),
         memory=MemorySettings(backend="local"),
     )
@@ -683,12 +683,12 @@ def mlflow_settings(tmp_dir: Path) -> Settings:
     """Settings with MLflow tracking pointing at a temp directory."""
     mlruns = tmp_dir / "mlruns"
     return Settings(
-        storage=StorageSettings(base_dir=tmp_dir / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_dir / ".dojo"),
         tracking=TrackingSettings(
             backend="mlflow",
             enabled=True,
             mlflow_tracking_uri=f"file:{mlruns}",
-            mlflow_experiment_name="test-agentml",
+            mlflow_experiment_name="test-dojo",
         ),
         memory=MemorySettings(backend="local"),
     )
@@ -722,7 +722,7 @@ async def mlflow_client(mlflow_settings: Settings) -> AsyncClient:
 
 ```python
 import pytest
-from agentml.core.state_machine import ExperimentState, InvalidTransitionError, transition
+from dojo.core.state_machine import ExperimentState, InvalidTransitionError, transition
 
 
 def test_valid_transitions():
@@ -746,8 +746,8 @@ def test_invalid_transitions():
 
 ```python
 import pytest
-from agentml.core.knowledge import KnowledgeAtom
-from agentml.storage.local_memory import LocalMemoryStore
+from dojo.core.knowledge import KnowledgeAtom
+from dojo.storage.local_memory import LocalMemoryStore
 
 
 @pytest.fixture
@@ -806,7 +806,7 @@ async def test_persistence_across_instances(tmp_path):
 
 ```python
 import pytest
-from agentml.tracking.mlflow_tracker import MlflowTracker
+from dojo.tracking.mlflow_tracker import MlflowTracker
 
 
 @pytest.fixture
@@ -871,7 +871,7 @@ async def test_multiple_experiments(tracker):
 
 ```python
 import pytest
-from agentml.tracking.noop_tracker import NoopTracker
+from dojo.tracking.noop_tracker import NoopTracker
 
 
 @pytest.mark.asyncio
@@ -889,7 +889,7 @@ async def test_noop_does_not_raise():
 
 ```python
 import pytest
-from agentml.tracking.file_tracker import FileTracker
+from dojo.tracking.file_tracker import FileTracker
 
 
 @pytest.fixture
@@ -927,16 +927,16 @@ async def test_log_params(tracker):
 ```python
 import pytest
 from pathlib import Path
-from agentml.api.deps import build_lab
-from agentml.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
-from agentml.tracking.file_tracker import FileTracker
-from agentml.tracking.noop_tracker import NoopTracker
-from agentml.storage.local_memory import LocalMemoryStore
+from dojo.api.deps import build_lab
+from dojo.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
+from dojo.tracking.file_tracker import FileTracker
+from dojo.tracking.noop_tracker import NoopTracker
+from dojo.storage.local_memory import LocalMemoryStore
 
 
 def test_build_lab_file_tracker(tmp_path):
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(backend="file", enabled=True),
         memory=MemorySettings(backend="local"),
     )
@@ -947,7 +947,7 @@ def test_build_lab_file_tracker(tmp_path):
 
 def test_build_lab_tracking_disabled(tmp_path):
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(enabled=False),
         memory=MemorySettings(backend="local"),
     )
@@ -957,7 +957,7 @@ def test_build_lab_tracking_disabled(tmp_path):
 
 def test_build_lab_mlflow_tracker(tmp_path):
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(
             backend="mlflow",
             enabled=True,
@@ -966,13 +966,13 @@ def test_build_lab_mlflow_tracker(tmp_path):
         memory=MemorySettings(backend="local"),
     )
     lab = build_lab(settings)
-    from agentml.tracking.mlflow_tracker import MlflowTracker
+    from dojo.tracking.mlflow_tracker import MlflowTracker
     assert isinstance(lab.tracking, MlflowTracker)
 
 
 def test_build_lab_unknown_backend(tmp_path):
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(backend="unknown", enabled=True),
         memory=MemorySettings(backend="local"),
     )
@@ -985,7 +985,7 @@ def test_build_lab_unknown_backend(tmp_path):
 ```python
 import pytest
 from pathlib import Path
-from agentml.config.settings import Settings, TrackingSettings, MemorySettings
+from dojo.config.settings import Settings, TrackingSettings, MemorySettings
 
 
 def test_default_settings():
@@ -1023,17 +1023,17 @@ memory:
 
 ```python
 import pytest
-from agentml.core.experiment import Experiment, ExperimentResult, Hypothesis
-from agentml.core.state_machine import ExperimentState
-from agentml.runtime.experiment_service import ExperimentService
-from agentml.api.deps import build_lab
-from agentml.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
+from dojo.core.experiment import Experiment, ExperimentResult, Hypothesis
+from dojo.core.state_machine import ExperimentState
+from dojo.runtime.experiment_service import ExperimentService
+from dojo.api.deps import build_lab
+from dojo.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
 
 
 @pytest.fixture
 def lab(tmp_path):
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(backend="file", enabled=True),
         memory=MemorySettings(backend="local"),
     )
@@ -1085,16 +1085,16 @@ async def test_complete_logs_metrics(service, lab):
 """Integration test: full MLflow tracking flow through the LabEnvironment."""
 
 import pytest
-from agentml.api.deps import build_lab
-from agentml.agents.stub_agent import StubAgent
-from agentml.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
-from agentml.core.task import Task
+from dojo.api.deps import build_lab
+from dojo.agents.stub_agent import StubAgent
+from dojo.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
+from dojo.core.task import Task
 
 
 @pytest.fixture
 def lab(tmp_path):
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(
             backend="mlflow",
             enabled=True,
@@ -1153,17 +1153,17 @@ async def test_multiple_experiments_tracked_separately(lab):
 """Integration test: memory store wired through LabEnvironment."""
 
 import pytest
-from agentml.api.deps import build_lab
-from agentml.agents.stub_agent import StubAgent
-from agentml.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
-from agentml.core.task import Task
-from agentml.core.knowledge import KnowledgeAtom
+from dojo.api.deps import build_lab
+from dojo.agents.stub_agent import StubAgent
+from dojo.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
+from dojo.core.task import Task
+from dojo.core.knowledge import KnowledgeAtom
 
 
 @pytest.fixture
 def lab(tmp_path):
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(backend="file", enabled=True),
         memory=MemorySettings(backend="local"),
     )
@@ -1213,14 +1213,14 @@ async def test_knowledge_persists_across_tasks(lab):
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from agentml.api.app import create_app
-from agentml.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
+from dojo.api.app import create_app
+from dojo.config.settings import Settings, StorageSettings, TrackingSettings, MemorySettings
 
 
 @pytest.fixture
 def app(tmp_path):
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(backend="file", enabled=True),
         memory=MemorySettings(backend="local"),
     )
@@ -1320,7 +1320,7 @@ async def test_create_knowledge_via_api(client):
 async def test_full_lifecycle_with_mlflow(tmp_path):
     """Same lifecycle but with MLflow tracker."""
     settings = Settings(
-        storage=StorageSettings(base_dir=tmp_path / ".agentml"),
+        storage=StorageSettings(base_dir=tmp_path / ".dojo"),
         tracking=TrackingSettings(
             backend="mlflow",
             enabled=True,
@@ -1353,20 +1353,20 @@ async def test_full_lifecycle_with_mlflow(tmp_path):
 | Action | File | Description |
 |---|---|---|
 | **Edit** | `pyproject.toml` | Add `mlflow = ["mlflow>=3.0"]` optional dep, add `mlflow>=3.0` to dev deps |
-| **Edit** | `src/agentml/config/settings.py` | Expand `TrackingSettings` (backend, mlflow_* fields), add `MemorySettings`, add to `Settings` |
-| **Edit** | `src/agentml/config/defaults.py` | Add tracking + memory default entries |
-| **Create** | `src/agentml/tracking/mlflow_tracker.py` | `MlflowTracker` implementing `TrackingConnector` |
-| **Create** | `src/agentml/tracking/noop_tracker.py` | `NoopTracker` for disabled tracking |
-| **Edit** | `src/agentml/interfaces/tracking.py` | Add `close()` method with default no-op |
-| **Edit** | `src/agentml/tracking/file_tracker.py` | Add `close()` no-op for interface compliance |
-| **Edit** | `src/agentml/api/deps.py` | Rewrite `build_lab()` with `_build_tracking()` + `_build_memory()` dispatch |
-| **Edit** | `src/agentml/api/app.py` | Add `lifespan` context manager for graceful shutdown |
-| **Edit** | `src/agentml/agents/stub_agent.py` | Add `KnowledgeAtom` creation to exercise memory store |
-| **Edit** | `src/agentml/cli/start.py` | Enhanced banner showing active tracking + memory backends |
-| **Edit** | `src/agentml/cli/config.py` | Add tracking + memory to default YAML template |
-| **Edit** | `src/agentml/api/routers/knowledge.py` | Add `POST /knowledge` and `DELETE /knowledge/{id}` |
-| **Create** | `src/agentml/api/routers/tracking.py` | `GET /tracking/{id}/metrics` endpoint |
-| **Edit** | `src/agentml/api/app.py` | Register tracking router |
+| **Edit** | `src/dojo/config/settings.py` | Expand `TrackingSettings` (backend, mlflow_* fields), add `MemorySettings`, add to `Settings` |
+| **Edit** | `src/dojo/config/defaults.py` | Add tracking + memory default entries |
+| **Create** | `src/dojo/tracking/mlflow_tracker.py` | `MlflowTracker` implementing `TrackingConnector` |
+| **Create** | `src/dojo/tracking/noop_tracker.py` | `NoopTracker` for disabled tracking |
+| **Edit** | `src/dojo/interfaces/tracking.py` | Add `close()` method with default no-op |
+| **Edit** | `src/dojo/tracking/file_tracker.py` | Add `close()` no-op for interface compliance |
+| **Edit** | `src/dojo/api/deps.py` | Rewrite `build_lab()` with `_build_tracking()` + `_build_memory()` dispatch |
+| **Edit** | `src/dojo/api/app.py` | Add `lifespan` context manager for graceful shutdown |
+| **Edit** | `src/dojo/agents/stub_agent.py` | Add `KnowledgeAtom` creation to exercise memory store |
+| **Edit** | `src/dojo/cli/start.py` | Enhanced banner showing active tracking + memory backends |
+| **Edit** | `src/dojo/cli/config.py` | Add tracking + memory to default YAML template |
+| **Edit** | `src/dojo/api/routers/knowledge.py` | Add `POST /knowledge` and `DELETE /knowledge/{id}` |
+| **Create** | `src/dojo/api/routers/tracking.py` | `GET /tracking/{id}/metrics` endpoint |
+| **Edit** | `src/dojo/api/app.py` | Register tracking router |
 | **Create** | `tests/conftest.py` | Shared fixtures |
 | **Create** | `tests/unit/test_state_machine.py` | State transition tests |
 | **Create** | `tests/unit/test_local_memory.py` | LocalMemoryStore tests |
@@ -1412,7 +1412,7 @@ async def test_full_lifecycle_with_mlflow(tmp_path):
 ### Local PoC (default — no MLflow)
 
 ```yaml
-# .agentml/config.yaml
+# .dojo/config.yaml
 tracking:
   backend: "file"
   enabled: true
@@ -1425,7 +1425,7 @@ memory:
 ### Local PoC with MLflow
 
 ```yaml
-# .agentml/config.yaml
+# .dojo/config.yaml
 tracking:
   backend: "mlflow"
   enabled: true
@@ -1453,24 +1453,24 @@ memory:
 ### Env var override
 
 ```bash
-AGENTML_TRACKING__BACKEND=mlflow \
-AGENTML_TRACKING__MLFLOW_TRACKING_URI=http://mlflow:5000 \
-agentml start
+DOJO_TRACKING__BACKEND=mlflow \
+DOJO_TRACKING__MLFLOW_TRACKING_URI=http://mlflow:5000 \
+dojo start
 ```
 
 ---
 
 ## Acceptance Criteria
 
-1. **`agentml start` with `backend: file`** — works as today, no regressions
-2. **`agentml start` with `backend: mlflow`** — starts successfully, creates MLflow experiment, logs metrics/params to MLflow
-3. **`agentml start` with `enabled: false`** — tracking calls are silently discarded
+1. **`dojo start` with `backend: file`** — works as today, no regressions
+2. **`dojo start` with `backend: mlflow`** — starts successfully, creates MLflow experiment, logs metrics/params to MLflow
+3. **`dojo start` with `enabled: false`** — tracking calls are silently discarded
 4. **`POST /tasks`** — creates experiment, logs to tracker (file or mlflow), creates knowledge atom in memory store
 5. **`GET /knowledge`** — returns knowledge atoms created by the agent
 6. **`GET /knowledge/relevant?query=...`** — returns keyword-matched atoms
 7. **`POST /knowledge`** — creates a knowledge atom via API
 8. **`GET /tracking/{id}/metrics`** — returns metrics from configured tracker
-9. **Banner** — `agentml start` displays active tracking backend and memory backend
+9. **Banner** — `dojo start` displays active tracking backend and memory backend
 10. **All unit tests pass** — state machine, memory store, experiment store, file tracker, mlflow tracker, noop tracker, settings, build_lab
 11. **All integration tests pass** — MLflow full flow, memory store full flow
 12. **All e2e tests pass** — full lifecycle with both file and mlflow backends

@@ -1,4 +1,6 @@
-# AgentML
+# Dojo.ml
+
+<img src="dojo-logo-no-bg.png" alt="Dojo.ml logo" width="180" />
 
 AI-powered ML experiment orchestration. Hexagonal architecture, config-driven backend selection, React dashboard.
 
@@ -32,7 +34,7 @@ The Claude agent backend works via the `claude` CLI — it spawns the binary as 
 
 ## Config
 
-Create `.agentml/config.yaml` or use env vars:
+Create `.dojo/config.yaml` or use env vars:
 
 ```yaml
 agent:
@@ -41,7 +43,7 @@ tracking:
   backend: file        # "file" or "mlflow"
 ```
 
-Env var override: `AGENTML__AGENT__BACKEND=stub`
+Env var override: `DOJO_AGENT__BACKEND=stub`
 
 ## Tests
 
@@ -54,7 +56,7 @@ just format     # auto-fix lint + format
 ## Project Structure
 
 ```
-src/agentml/
+src/dojo/
   agents/       # AgentBackend ABC + backends (claude, stub)
   api/          # FastAPI app + routers
   tools/        # MCP tool definitions (experiments, knowledge, tracking)

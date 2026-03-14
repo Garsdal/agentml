@@ -1,6 +1,6 @@
 # Workspace Environments & Code Traceability Plan
 
-> Fixing the two biggest operational problems in AgentML: wasted API calls on boilerplate, and missing code traceability for experiments.
+> Fixing the two biggest operational problems in Dojo.ml: wasted API calls on boilerplate, and missing code traceability for experiments.
 
 ---
 
@@ -28,7 +28,7 @@ API call 10: Bash → cd /tmp/repo && pip install -e .
 
 Each of these is a full LLM round-trip. At ~$0.01–0.05 per call, 50 setup calls costs $0.50–2.50 before any research begins. Multiply by hundreds of agent runs and this becomes the dominant cost.
 
-**Root cause**: Domain tools are purely informational. The agent is told *what* tools exist, but has no pre-configured environment to *use* them. The agent's `cwd` is the agentml project root, not the user's project. There's no virtual environment, no installed dependencies, and no reliable import paths.
+**Root cause**: Domain tools are purely informational. The agent is told *what* tools exist, but has no pre-configured environment to *use* them. The agent's `cwd` is the dojo project root, not the user's project. There's no virtual environment, no installed dependencies, and no reliable import paths.
 
 ### 1.2 No Code Traceability
 
@@ -43,7 +43,7 @@ Agent → complete_experiment(metrics={...})
 # /tmp/exp_001.py is lost after the run
 ```
 
-**Root cause**: There's no mechanism connecting "code that was executed" to "experiment that recorded the results." The `Experiment` model stores `result.metrics` and `result.logs`, but not the code. The `Bash` tool is a general-purpose escape hatch — AgentML has no visibility into what it's used for.
+**Root cause**: There's no mechanism connecting "code that was executed" to "experiment that recorded the results." The `Experiment` model stores `result.metrics` and `result.logs`, but not the code. The `Bash` tool is a general-purpose escape hatch — Dojo.ml has no visibility into what it's used for.
 
 ---
 
@@ -122,8 +122,8 @@ When a domain is created with a workspace, the system performs a **one-time setu
 ```
 1. Resolve workspace path
    ├── LOCAL: validate path exists, use as-is
-   ├── GIT: clone to .agentml/workspaces/{domain_id}/
-   └── EMPTY: create .agentml/workspaces/{domain_id}/
+   ├── GIT: clone to .dojo/workspaces/{domain_id}/
+   └── EMPTY: create .dojo/workspaces/{domain_id}/
 
 2. Detect Python environment
    ├── Found existing venv/conda? → use it
@@ -181,7 +181,7 @@ POST /domains
 
 **Option C: CLI wizard**
 ```bash
-$ agentml domain create
+$ dojo domain create
   Name: Housing Price Prediction
   Workspace source [local/git/empty]: local
   Path: /Users/me/projects/housing-ml
@@ -191,7 +191,7 @@ $ agentml domain create
   ✓ Found 3 data files: train.csv, test.csv, sample_submission.csv
   ✓ Detected 2 Python modules: src.data, src.models
 
-  → Suggested domain tools (review with `agentml domain tools`):
+  → Suggested domain tools (review with `dojo domain tools`):
     1. load_training_data — Load train.csv as DataFrame
     2. load_test_data — Load test.csv as DataFrame
     3. evaluate_submission — Score predictions against sample format
@@ -445,7 +445,7 @@ async def run_experiment_code(args: dict) -> ToolResult:
 For each `run_experiment_code` call:
 
 ```
-.agentml/artifacts/experiments/{experiment_id}/
+.dojo/artifacts/experiments/{experiment_id}/
 ├── run_1.py                # The actual Python code (first execution)
 ├── run_1_meta.json         # Metadata (exit code, duration, timestamp)
 ├── run_2.py                # Second execution (e.g., after fixing a bug)
@@ -524,7 +524,7 @@ def build_system_prompt(run, *, domain, accumulated_knowledge):
     workspace_section = _build_workspace_section(domain)
     tools_section = _build_tools_section(domain)  # now distinguishes hint vs executable
 
-    return f"""You are an autonomous ML research agent operating within AgentML.
+    return f"""You are an autonomous ML research agent operating within Dojo.ml.
 
 ## Your role
 You systematically explore ML approaches to solve a given problem. You create
@@ -534,7 +534,7 @@ experiments, write and execute code, track results, and record learnings.
 {run.domain_id}
 {domain_section}
 {workspace_section}
-## Available AgentML tools (via MCP)
+## Available Dojo.ml tools (via MCP)
 
 ### Platform tools
 - **create_experiment** — Register a new experiment before running code
@@ -642,7 +642,7 @@ class LocalSandbox(Sandbox):
 
         # Write script to workspace (not temp dir) for traceability
         work_dir = cwd or tempfile.mkdtemp()
-        script_path = Path(work_dir) / f"_agentml_run_{uuid4().hex[:8]}.py"
+        script_path = Path(work_dir) / f"_dojo_run_{uuid4().hex[:8]}.py"
         script_path.write_text(code)
 
         env = {**os.environ, **(env_vars or {})}
@@ -775,8 +775,8 @@ POST /domains
    - Find dependency files (pyproject.toml, requirements.txt)
    - Detect common ML frameworks (sklearn, torch, lightgbm, etc.)
 2. Auto-generate executable tool suggestions from scan results
-3. `agentml domain create` CLI command with interactive wizard
-4. `agentml domain scan` CLI command to re-scan and suggest tools
+3. `dojo domain create` CLI command with interactive wizard
+4. `dojo domain scan` CLI command to re-scan and suggest tools
 5. Frontend: workspace setup status indicator on domain page
 6. Frontend: code viewer in experiment detail view
 
@@ -788,7 +788,7 @@ POST /domains
 
 Domains without a workspace continue to work exactly as they do today. The workspace field is optional (`workspace: Workspace | None = None`). If no workspace is configured:
 
-- Agent runs use the current default `cwd` (agentml project root or configured path)
+- Agent runs use the current default `cwd` (dojo project root or configured path)
 - Domain tools remain semantic hints in the system prompt
 - `run_experiment_code` still works but executes with default Python in default cwd
 

@@ -1,6 +1,6 @@
-# AgentML — Product Requirements Document
+# Dojo.ml — Product Requirements Document
 
-**Project name:** AgentML
+**Project name:** Dojo.ml
 **Type:** Autonomous ML Research Framework
 **Version:** 0.1 — Initial Architecture & Implementation Spec
 **Date:** 2026-02-25
@@ -35,13 +35,13 @@
 
 ## 1. Vision
 
-Traditional ML platforms automate training pipelines. AgentML automates **scientific improvement**.
+Traditional ML platforms automate training pipelines. Dojo.ml automates **scientific improvement**.
 
 Instead of:
 
 > Humans repeatedly designing experiments to improve models.
 
-AgentML provides:
+Dojo.ml provides:
 
 > A persistent autonomous ML researcher that runs experiments, learns generalizable lessons, and transfers knowledge across ML problems.
 
@@ -53,7 +53,7 @@ The system must:
 - **Accumulate reusable knowledge** over time via structured knowledge atoms
 - Be **fully swappable at every layer** — compute, storage, tracking, and LLM provider can all be replaced without touching domain logic
 
-### What AgentML Ultimately Is
+### What Dojo.ml Ultimately Is
 
 Not AutoML. Not MLOps. It is:
 
@@ -65,11 +65,11 @@ You are no longer optimizing models. You are **optimizing the process that disco
 
 ## 2. Non-Goals
 
-AgentML is **not**:
+Dojo.ml is **not**:
 
 | Not This | Why |
 |---|---|
-| A replacement for feature stores | AgentML consumes features; it doesn't manage them |
+| A replacement for feature stores | Dojo.ml consumes features; it doesn't manage them |
 | A new deep learning framework | It orchestrates existing frameworks (scikit-learn, XGBoost, PyTorch, etc.) |
 | A hyperparameter tuner | It reasons about *what* to try, not grid-search parameters |
 | A production inference service | It produces models; serving is out of scope |
@@ -92,7 +92,7 @@ Hypothesis → Experiment → Evidence → Analysis → Learning → Improved Hy
 ```
 
 - The **LLM** performs reasoning (hypothesis generation, analysis, learning extraction).
-- **AgentML** performs enforcement (state machine), execution (connectors), and memory (knowledge store).
+- **Dojo.ml** performs enforcement (state machine), execution (connectors), and memory (knowledge store).
 
 ### 3.2 Separation of Responsibilities
 
@@ -173,12 +173,12 @@ class ComputeConnector(Protocol):
     └───────────┘   └───────────┘  └───────────┘  └───────────┘
 ```
 
-### 4.2 Process Model — `agentml start`
+### 4.2 Process Model — `dojo start`
 
-When the user runs `agentml start`, a single CLI command launches all services:
+When the user runs `dojo start`, a single CLI command launches all services:
 
 ```
-agentml start
+dojo start
   ├── FastAPI server         (uvicorn, port 8000)
   ├── MLflow tracking server (mlflow server, port 5000)
   ├── Streamlit UI           (streamlit run, port 8501)
@@ -215,13 +215,13 @@ CLI → API → Core → Connectors → External Systems
 ### Step 1 — Install
 
 ```bash
-pip install agentml
+pip install dojo
 ```
 
 ### Step 2 — Start the platform
 
 ```bash
-agentml start
+dojo start
 ```
 
 This launches all services. User sees:
@@ -230,7 +230,7 @@ This launches all services. User sees:
 ✓ MLflow tracking server    → http://localhost:5000
 ✓ FastAPI control plane      → http://localhost:8000
 ✓ Agent supervisor           → running
-✓ AgentML dashboard          → http://localhost:8501
+✓ Dojo.ml dashboard          → http://localhost:8501
 ```
 
 ### Step 3 — Add a Problem (the only integration point)
@@ -239,7 +239,7 @@ A team creates a **Problem Adapter** — the single file that connects their dom
 
 ```python
 # my_team_adapter.py
-from agentml import ProblemAdapter
+from dojo import ProblemAdapter
 
 class FraudAdapter(ProblemAdapter):
 
@@ -277,14 +277,14 @@ class FraudAdapter(ProblemAdapter):
 Register via CLI:
 
 ```bash
-agentml register-problem fraud ./my_team_adapter.py
+dojo register-problem fraud ./my_team_adapter.py
 ```
 
 **No LLM prompt writing required.** The adapter is pure Python — teams keep their existing training code.
 
 ### Step 4 — Connect an LLM
 
-Create `.agentml/config.yaml`:
+Create `.dojo/config.yaml`:
 
 ```yaml
 llm:
@@ -307,7 +307,7 @@ From the UI dashboard:
 Or via CLI:
 
 ```bash
-agentml agent start --problem fraud
+dojo agent start --problem fraud
 ```
 
 The agent immediately begins the scientific loop: generating hypotheses, designing experiments, executing them through the adapter, analyzing results, and storing knowledge.
@@ -317,7 +317,7 @@ The agent immediately begins the scientific loop: generating hypotheses, designi
 ## 6. Project Structure
 
 ```
-agentml/
+dojo/
 ├── pyproject.toml                      # PEP 621 — single source of truth
 ├── README.md
 ├── LICENSE
@@ -326,7 +326,7 @@ agentml/
 ├── PRD.md                              # This document
 │
 ├── src/
-│   └── agentml/                        # Importable package (src layout)
+│   └── dojo/                        # Importable package (src layout)
 │       ├── __init__.py                 # Public API: ProblemAdapter, etc.
 │       ├── _version.py                 # Package version
 │       │
@@ -334,10 +334,10 @@ agentml/
 │       ├── cli/
 │       │   ├── __init__.py
 │       │   ├── main.py                 # Typer app — entry point
-│       │   ├── start.py                # `agentml start` — launch all services
-│       │   ├── agent.py                # `agentml agent start/stop/list`
-│       │   ├── problem.py              # `agentml register-problem`
-│       │   └── config.py               # `agentml config show/set`
+│       │   ├── start.py                # `dojo start` — launch all services
+│       │   ├── agent.py                # `dojo agent start/stop/list`
+│       │   ├── problem.py              # `dojo register-problem`
+│       │   └── config.py               # `dojo config show/set`
 │       │
 │       │── ─── API ──────────────────────────────────────────────
 │       ├── api/
@@ -430,7 +430,7 @@ agentml/
 │       │── ─── CONFIG ───────────────────────────────────────────
 │       ├── config/
 │       │   ├── __init__.py
-│       │   ├── settings.py             # Pydantic Settings — loads .agentml/config.yaml + env vars
+│       │   ├── settings.py             # Pydantic Settings — loads .dojo/config.yaml + env vars
 │       │   └── defaults.py             # Default configuration values
 │       │
 │       │── ─── UTILS ────────────────────────────────────────────
@@ -438,7 +438,7 @@ agentml/
 │           ├── __init__.py
 │           ├── logging.py              # Structured logging (structlog)
 │           ├── serialization.py        # JSON/YAML/datetime serializers
-│           ├── process.py              # Process management for `agentml start`
+│           ├── process.py              # Process management for `dojo start`
 │           └── ids.py                  # ID generation (ULIDs or UUIDs)
 │
 │── ─── FRONTEND ─────────────────────────────────────────────────
@@ -497,7 +497,7 @@ agentml/
 
 ### 6.1 Why `src/` Layout?
 
-The `src/` layout prevents accidental imports from the working directory during development. When you run `python -c "import agentml"` from the repo root, it forces the installed package to be used — never the raw source directory. This avoids a class of subtle bugs in testing and packaging.
+The `src/` layout prevents accidental imports from the working directory during development. When you run `python -c "import dojo"` from the repo root, it forces the installed package to be used — never the raw source directory. This avoids a class of subtle bugs in testing and packaging.
 
 ### 6.2 Why Separate `core/` from `connectors/`?
 
@@ -515,23 +515,23 @@ Core contains **domain logic** that should never change when you swap infrastruc
 
 ```toml
 [project.scripts]
-agentml = "agentml.cli.main:app"
+dojo = "dojo.cli.main:app"
 ```
 
 **Commands:**
 
 | Command | Module | Description |
 |---|---|---|
-| `agentml start` | `cli/start.py` | Launch all services (FastAPI, MLflow, Streamlit, Supervisor) |
-| `agentml stop` | `cli/start.py` | Graceful shutdown of all services |
-| `agentml agent start --problem <name>` | `cli/agent.py` | Start an agent on a registered problem |
-| `agentml agent stop <agent_id>` | `cli/agent.py` | Stop a running agent |
-| `agentml agent list` | `cli/agent.py` | List all agents and their status |
-| `agentml register-problem <name> <path>` | `cli/problem.py` | Register a problem adapter |
-| `agentml config show` | `cli/config.py` | Display current configuration |
-| `agentml config set <key> <value>` | `cli/config.py` | Update configuration |
+| `dojo start` | `cli/start.py` | Launch all services (FastAPI, MLflow, Streamlit, Supervisor) |
+| `dojo stop` | `cli/start.py` | Graceful shutdown of all services |
+| `dojo agent start --problem <name>` | `cli/agent.py` | Start an agent on a registered problem |
+| `dojo agent stop <agent_id>` | `cli/agent.py` | Stop a running agent |
+| `dojo agent list` | `cli/agent.py` | List all agents and their status |
+| `dojo register-problem <name> <path>` | `cli/problem.py` | Register a problem adapter |
+| `dojo config show` | `cli/config.py` | Display current configuration |
+| `dojo config set <key> <value>` | `cli/config.py` | Update configuration |
 
-**`agentml start` behavior:**
+**`dojo start` behavior:**
 
 ```python
 # Pseudocode for cli/start.py
@@ -571,7 +571,7 @@ def start():
 
 ```python
 def create_app(settings: Settings) -> FastAPI:
-    app = FastAPI(title="AgentML", version=__version__)
+    app = FastAPI(title="Dojo.ml", version=__version__)
 
     # Dependency injection — wire connectors based on settings
     container = build_container(settings)
@@ -918,7 +918,7 @@ class ProblemAdapter(ABC):
     """Abstract base class that users implement to integrate their ML problem.
 
     This is the ONLY class users need to implement. Everything else is handled
-    by AgentML.
+    by Dojo.ml.
     """
 
     @abstractmethod
@@ -1009,7 +1009,7 @@ All connectors use Python `Protocol` classes for structural subtyping. No inheri
 
 ```python
 from typing import Protocol
-from agentml.core.models import JobSpec, JobResult, JobStatus
+from dojo.core.models import JobSpec, JobResult, JobStatus
 
 class ComputeConnector(Protocol):
     """Executes ML training/evaluation jobs."""
@@ -1187,13 +1187,13 @@ class AgentStateRepository(Protocol):
 
 | Class | Module | Phase | Backend |
 |---|---|---|---|
-| `FileSystemStorage` | `storage/filesystem.py` | 1 | JSON files in `.agentml/data/` |
+| `FileSystemStorage` | `storage/filesystem.py` | 1 | JSON files in `.dojo/data/` |
 | `PostgresStorage` | `storage/postgres.py` | 2 | PostgreSQL via SQLAlchemy async |
 
 ### 8.6 Phase 1 File Storage Layout
 
 ```
-.agentml/
+.dojo/
 ├── config.yaml                  # User configuration
 └── data/
     ├── experiments/
@@ -1233,7 +1233,7 @@ MLflow also has a swappable backend:
 | **1** | `file:./mlruns` | `./mlruns/artifacts/` |
 | **2** | `postgresql://...` | S3 or local |
 
-The `agentml start` command passes the backend URI to `mlflow server --backend-store-uri`.
+The `dojo start` command passes the backend URI to `mlflow server --backend-store-uri`.
 
 ---
 
@@ -1302,11 +1302,11 @@ The state machine guarantees **reproducibility, governance, and learning enforce
 
 ## 11. Knowledge Memory
 
-### 11.1 What Makes AgentML Different
+### 11.1 What Makes Dojo.ml Different
 
-Most AutoML systems store experiment results. AgentML stores **generalizable ML knowledge**.
+Most AutoML systems store experiment results. Dojo.ml stores **generalizable ML knowledge**.
 
-The Knowledge Memory is the key differentiator. It transforms AgentML from "a thing that runs experiments" into "a thing that **learns how to do ML better**."
+The Knowledge Memory is the key differentiator. It transforms Dojo.ml from "a thing that runs experiments" into "a thing that **learns how to do ML better**."
 
 ### 11.2 Knowledge Atom Structure
 
@@ -1465,7 +1465,7 @@ The Phase 1 `SimpleAgent` uses raw `anthropic` SDK calls. This works but has lim
 
 The `claude-agent-sdk` package (from Anthropic) provides:
 
-| Feature | Benefit for AgentML |
+| Feature | Benefit for Dojo.ml |
 |---|---|
 | `AgentDefinition` | Define specialized subagents (hypothesis agent, analysis agent, knowledge agent) |
 | `@tool` decorator | Clean tool definition with auto-generated schemas |
@@ -1483,7 +1483,7 @@ from claude_agent_sdk import (
     tool, create_sdk_mcp_server, HookMatcher,
 )
 
-# === Define AgentML-specific tools as MCP tools ===
+# === Define Dojo.ml-specific tools as MCP tools ===
 
 @tool("design_experiment", "Design a new ML experiment with a hypothesis and plan", {
     "hypothesis": str,
@@ -1512,8 +1512,8 @@ async def analyze_results(args):
 
 # === Bundle tools into MCP server ===
 
-agentml_tools = create_sdk_mcp_server(
-    name="agentml-tools",
+dojo_tools = create_sdk_mcp_server(
+    name="dojo-tools",
     version="0.1.0",
     tools=[design_experiment, query_knowledge, analyze_results],
 )
@@ -1525,30 +1525,30 @@ agentml_tools = create_sdk_mcp_server(
 # === Define specialized subagents ===
 
 options = ClaudeAgentOptions(
-    system_prompt="You are the AgentML research supervisor.",
+    system_prompt="You are the Dojo.ml research supervisor.",
     max_turns=100,
     max_budget_usd=5.0,
 
-    mcp_servers={"agentml": agentml_tools},
-    allowed_tools=["mcp__agentml__*"],
+    mcp_servers={"dojo": dojo_tools},
+    allowed_tools=["mcp__dojo__*"],
 
     agents={
         "hypothesis_agent": AgentDefinition(
             description="Generates hypotheses for ML experiments based on problem context and knowledge",
             prompt="You generate scientific hypotheses for ML experiments. Be creative but grounded in evidence.",
-            tools=["mcp__agentml__query_knowledge", "mcp__agentml__design_experiment"],
+            tools=["mcp__dojo__query_knowledge", "mcp__dojo__design_experiment"],
             model="sonnet",
         ),
         "analysis_agent": AgentDefinition(
             description="Analyzes experiment results and extracts insights",
             prompt="You analyze ML experiment results. Focus on statistical significance and actionable insights.",
-            tools=["mcp__agentml__analyze_results", "mcp__agentml__query_knowledge"],
+            tools=["mcp__dojo__analyze_results", "mcp__dojo__query_knowledge"],
             model="sonnet",
         ),
         "knowledge_agent": AgentDefinition(
             description="Synthesizes generalizable knowledge from experiment history",
             prompt="You extract generalizable ML knowledge from experiments. Focus on claims that transfer across problems.",
-            tools=["mcp__agentml__query_knowledge"],
+            tools=["mcp__dojo__query_knowledge"],
             model="sonnet",
         ),
     },
@@ -1557,7 +1557,7 @@ options = ClaudeAgentOptions(
     hooks={
         "PreToolUse": [
             HookMatcher(
-                matcher="mcp__agentml__design_experiment",
+                matcher="mcp__dojo__design_experiment",
                 hooks=[validate_experiment_hook],  # enforce state machine
             ),
         ],
@@ -1649,7 +1649,7 @@ The `Agent` Protocol ensures this migration is seamless:
 ### 15.1 Command Tree
 
 ```
-agentml
+dojo
 ├── start                    # Launch all services
 │   ├── --port INT           # FastAPI port (default: 8000)
 │   ├── --ui-port INT        # Streamlit port (default: 8501)
@@ -1736,8 +1736,8 @@ agentml
 The Streamlit frontend communicates with the FastAPI backend via HTTP. The `frontend/api_client.py` module provides a typed client:
 
 ```python
-class AgentMLClient:
-    """HTTP client for the AgentML API."""
+class Dojo.mlClient:
+    """HTTP client for the Dojo.ml API."""
 
     def __init__(self, base_url: str = "http://localhost:8000"):
         self._client = httpx.AsyncClient(base_url=base_url)
@@ -1757,10 +1757,10 @@ class AgentMLClient:
 
 ### 17.1 Configuration File
 
-Location: `.agentml/config.yaml` (in the working directory)
+Location: `.dojo/config.yaml` (in the working directory)
 
 ```yaml
-# .agentml/config.yaml
+# .dojo/config.yaml
 
 # LLM provider configuration
 llm:
@@ -1786,7 +1786,7 @@ compute:
 # Storage backend
 storage:
   backend: filesystem               # filesystem | postgres
-  path: .agentml/data               # When backend=filesystem
+  path: .dojo/data               # When backend=filesystem
   # database_url: postgresql://...  # When backend=postgres
 
 # Tracking (MLflow)
@@ -1808,9 +1808,9 @@ ui:
 
 ### 17.2 Configuration Loading Priority
 
-1. Environment variables (`AGENTML_LLM__PROVIDER=anthropic`)
-2. `.agentml/config.yaml` in working directory
-3. `~/.agentml/config.yaml` (global defaults)
+1. Environment variables (`DOJO_LLM__PROVIDER=anthropic`)
+2. `.dojo/config.yaml` in working directory
+3. `~/.dojo/config.yaml` (global defaults)
 4. Built-in defaults (`config/defaults.py`)
 
 ### 17.3 Pydantic Settings
@@ -1835,9 +1835,9 @@ class Settings(BaseSettings):
     ui: UISettings = UISettings()
 
     model_config = SettingsConfigDict(
-        env_prefix="AGENTML_",
+        env_prefix="DOJO_",
         env_nested_delimiter="__",
-        yaml_file=".agentml/config.yaml",
+        yaml_file=".dojo/config.yaml",
     )
 ```
 
@@ -1851,7 +1851,7 @@ class Settings(BaseSettings):
 
 | Week | Deliverable |
 |---|---|
-| **1** | Project scaffolding, `pyproject.toml`, CLI skeleton (`agentml start`), configuration loading, domain models (Experiment, KnowledgeAtom, AgentThought) |
+| **1** | Project scaffolding, `pyproject.toml`, CLI skeleton (`dojo start`), configuration loading, domain models (Experiment, KnowledgeAtom, AgentThought) |
 | **2** | Experiment state machine, filesystem storage (JSON), ExperimentEngine, ProblemAdapter ABC, ProblemRegistry |
 | **3** | SimpleAgent (Anthropic `tool_runner`), agent tools (design_experiment, query_knowledge), AgentSupervisor, LLMConnector (Anthropic), LocalCompute connector |
 | **4** | KnowledgeMemory + KnowledgeSynthesizer, MLflow tracking connector, FastAPI API (experiments, agents, knowledge), Streamlit UI (basic), example Titanic adapter |
@@ -1862,7 +1862,7 @@ class Settings(BaseSettings):
 |---|---|
 | LLM | Anthropic Claude (raw `anthropic` SDK) |
 | Compute | Local subprocess |
-| Storage | JSON files in `.agentml/data/` |
+| Storage | JSON files in `.dojo/data/` |
 | Tracking | MLflow with file backend |
 | UI | Streamlit |
 | CLI | Typer |
@@ -1870,7 +1870,7 @@ class Settings(BaseSettings):
 
 **Phase 1 delivers:**
 
-- `pip install agentml && agentml start` works
+- `pip install dojo && dojo start` works
 - Register a problem, start an agent, watch it run experiments
 - Knowledge atoms accumulate
 - UI shows agent thoughts, experiments, knowledge
@@ -1921,7 +1921,7 @@ class Settings(BaseSettings):
 | Temptation | Why Defer |
 |---|---|
 | Kubernetes compute | Complexity explosion. Local + Modal covers 95% of cases. |
-| Custom deep learning training loops | Users handle this in their adapters. Not AgentML's job. |
+| Custom deep learning training loops | Users handle this in their adapters. Not Dojo.ml's job. |
 | Multi-tenant SaaS | Premature. Single-user local is the right starting point. |
 | Real-time streaming UI | Streamlit polling is fine for Phase 1. WebSockets in Phase 2. |
 | Embedding-based knowledge search | Keyword matching works for Phase 1. Embeddings in Phase 2. |
@@ -1935,7 +1935,7 @@ class Settings(BaseSettings):
 
 | # | Criterion | Measurable |
 |---|---|---|
-| 1 | `pip install agentml && agentml start` launches all services within 30 seconds | ✅ |
+| 1 | `pip install dojo && dojo start` launches all services within 30 seconds | ✅ |
 | 2 | A new ML problem can be integrated in < 1 hour by implementing ProblemAdapter | ✅ |
 | 3 | Agent improves model performance without human intervention over 10+ experiments | ✅ |
 | 4 | Swapping compute/storage/tracking requires only config change, zero code changes | ✅ |
@@ -1972,7 +1972,7 @@ This requires:
 
 ```toml
 [project]
-name = "agentml"
+name = "dojo"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
@@ -2027,7 +2027,7 @@ dev = [
 ]
 
 [project.scripts]
-agentml = "agentml.cli.main:app"
+dojo = "dojo.cli.main:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -2106,4 +2106,4 @@ connectors/registry.py
 
 ---
 
-*This document is the single source of truth for AgentML architecture and implementation. All implementation work should reference this PRD.*
+*This document is the single source of truth for Dojo.ml architecture and implementation. All implementation work should reference this PRD.*

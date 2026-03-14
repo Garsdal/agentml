@@ -35,7 +35,7 @@ POST /agent/run ─┘          │                    ├── ClaudeAgentBack
 
 Currently planned as a thin "yield canned events" stub. Instead, make it a **local simulation** that actually calls the v1 `ToolDef` handlers:
 
-**File:** `src/agentml/agents/backends/stub.py`
+**File:** `src/dojo/agents/backends/stub.py`
 
 ```python
 class StubAgentBackend(AgentBackend):
@@ -129,7 +129,7 @@ class StubAgentBackend(AgentBackend):
 
 The tasks router currently hardcodes `StubAgent()`. Rewrite it to go through the same orchestrator path:
 
-**File:** `src/agentml/api/routers/tasks.py`
+**File:** `src/dojo/api/routers/tasks.py`
 
 ```python
 @router.post("", response_model=TaskResponse)
@@ -154,10 +154,10 @@ This means `POST /tasks` and `POST /agent/run` share the exact same pipeline. Th
 
 | Delete | Reason |
 |---|---|
-| `src/agentml/interfaces/agent.py` | Replaced by `agents/backend.py` (`AgentBackend` ABC) |
-| `src/agentml/agents/stub_agent.py` | Replaced by `agents/backends/stub.py` (`StubAgentBackend`) |
+| `src/dojo/interfaces/agent.py` | Replaced by `agents/backend.py` (`AgentBackend` ABC) |
+| `src/dojo/agents/stub_agent.py` | Replaced by `agents/backends/stub.py` (`StubAgentBackend`) |
 
-Update `src/agentml/interfaces/__init__.py` to remove the `Agent` re-export.
+Update `src/dojo/interfaces/__init__.py` to remove the `Agent` re-export.
 
 ### Step 4 — Update v2 plan section 2.4 (~5 min)
 

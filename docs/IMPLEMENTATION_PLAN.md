@@ -1,6 +1,6 @@
-# AgentML — Implementation Plan
+# Dojo.ml — Implementation Plan
 
-**Goal:** Scaffold the full project, implement all interfaces, wire local backends, and get `agentml start` running with a passing end-to-end test.
+**Goal:** Scaffold the full project, implement all interfaces, wire local backends, and get `dojo start` running with a passing end-to-end test.
 
 **Stack:** Python 3.13, uv, FastAPI, Typer, Pydantic Settings, structlog, hatchling  
 **Architecture:** Hexagonal (ports & adapters) from STRUCTURE.md + FastAPI/CLI structure from PRD.md  
@@ -11,7 +11,7 @@
 ## Phase 0 — Project Setup
 
 1. `uv init` with src layout, Python 3.13
-2. `pyproject.toml` — hatchling build, all deps, `[project.scripts] agentml = "agentml.cli.main:app"`
+2. `pyproject.toml` — hatchling build, all deps, `[project.scripts] dojo = "dojo.cli.main:app"`
 3. `Makefile` — `dev`, `test`, `lint`, `run`
 4. `.python-version` → `3.13`
 5. `ruff.toml`
@@ -21,7 +21,7 @@
 Pure dataclasses, zero infrastructure imports.
 
 ```
-src/agentml/core/
+src/dojo/core/
 ├── __init__.py
 ├── experiment.py      # Experiment, Hypothesis, ExperimentResult
 ├── task.py            # Task, TaskStatus, TaskPlan, TaskResult
@@ -41,7 +41,7 @@ src/agentml/core/
 ABCs defining every swappable contract. This is the critical layer.
 
 ```
-src/agentml/interfaces/
+src/dojo/interfaces/
 ├── __init__.py
 ├── agent.py             # Agent ABC: async run(task, lab) -> TaskResult
 ├── compute.py           # ComputeBackend ABC: run(fn, *args) -> Any
@@ -60,7 +60,7 @@ Each file: one ABC, 3-6 abstract methods, typed signatures, docstrings.
 One concrete class per interface. JSON files + subprocess + in-memory.
 
 ```
-src/agentml/
+src/dojo/
 ├── compute/
 │   └── local.py           # LocalCompute — fn(*args) directly
 ├── sandbox/
@@ -82,7 +82,7 @@ src/agentml/
 The wiring layer. LabEnvironment is the DI container; ExperimentService drives the lifecycle.
 
 ```
-src/agentml/runtime/
+src/dojo/runtime/
 ├── __init__.py
 ├── lab.py                  # LabEnvironment — holds all injected backends
 └── experiment_service.py   # create/run/record experiments using LabEnvironment
@@ -104,20 +104,20 @@ class ExperimentService:
 ## Phase 5 — Configuration
 
 ```
-src/agentml/config/
+src/dojo/config/
 ├── __init__.py
-├── settings.py    # Pydantic Settings: loads .agentml/config.yaml + env vars
+├── settings.py    # Pydantic Settings: loads .dojo/config.yaml + env vars
 └── defaults.py    # Default values
 ```
 
 Nested settings: `LLMSettings`, `SandboxSettings`, `StorageSettings`, `TrackingSettings`, `APISettings`.  
-Env prefix: `AGENTML_`, nested delimiter: `__`.  
-YAML file: `.agentml/config.yaml`.
+Env prefix: `DOJO_`, nested delimiter: `__`.  
+YAML file: `.dojo/config.yaml`.
 
 ## Phase 6 — FastAPI API
 
 ```
-src/agentml/api/
+src/dojo/api/
 ├── __init__.py
 ├── app.py          # create_app(settings) -> FastAPI, wires LabEnvironment
 ├── deps.py         # build_lab(settings) -> LabEnvironment
@@ -143,15 +143,15 @@ src/agentml/api/
 ## Phase 7 — CLI
 
 ```
-src/agentml/cli/
+src/dojo/cli/
 ├── __init__.py
 ├── main.py       # Typer app, register subcommands
-├── start.py      # `agentml start` — launches uvicorn
-├── run.py        # `agentml run "<prompt>"` — POST /tasks then poll
-└── config.py     # `agentml config init/show`
+├── start.py      # `dojo start` — launches uvicorn
+├── run.py        # `dojo run "<prompt>"` — POST /tasks then poll
+└── config.py     # `dojo config init/show`
 ```
 
-`agentml start`:
+`dojo start`:
 1. Load settings
 2. Build FastAPI app
 3. Run uvicorn programmatically (single process, no subprocess management for PoC)
@@ -160,7 +160,7 @@ src/agentml/cli/
 ## Phase 8 — Utils
 
 ```
-src/agentml/utils/
+src/dojo/utils/
 ├── __init__.py
 ├── logging.py         # structlog setup
 ├── ids.py             # generate_id() → ULID string
@@ -213,7 +213,7 @@ Exact sequence to avoid import errors:
 | # | What | Files |
 |---|---|---|
 | 1 | Project config | `pyproject.toml`, `Makefile`, `ruff.toml`, `.python-version` |
-| 2 | Package init | `src/agentml/__init__.py`, `src/agentml/_version.py` |
+| 2 | Package init | `src/dojo/__init__.py`, `src/dojo/_version.py` |
 | 3 | Utils | `utils/ids.py`, `utils/logging.py`, `utils/serialization.py` |
 | 4 | Core models | `core/experiment.py`, `core/task.py`, `core/knowledge.py`, `core/state_machine.py` |
 | 5 | Interfaces | All 8 interface files |
@@ -253,11 +253,11 @@ No MLflow, no Streamlit, no heavy deps in the PoC. Added as optional extras late
 
 ---
 
-## What `agentml start` Does (PoC)
+## What `dojo start` Does (PoC)
 
 ```
-$ agentml start
-  AgentML v0.1.0
+$ dojo start
+  Dojo.ml v0.1.0
   ✓ FastAPI server → http://localhost:8000
   ✓ API docs       → http://localhost:8000/docs
 

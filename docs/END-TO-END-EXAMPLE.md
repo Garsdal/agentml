@@ -20,7 +20,7 @@
    ├── build_system_prompt(run) → system prompt string
    ├── collect_all_tools(lab) → [ToolDef, ToolDef, ...] (11 tools)
    └── backend.configure(tool_defs, config)
-       ├── ClaudeToolAdapter.create_server("agentml", tool_defs) → MCP server
+       ├── ClaudeToolAdapter.create_server("dojo", tool_defs) → MCP server
        └── ClaudeSDKClient(options) initialized
 5. asyncio.create_task(orchestrator.execute(run))
    └── backend.execute(prompt) → yields AgentEvent stream
@@ -67,7 +67,7 @@ Experiments: 5 created, 4 completed, 1 failed
 Knowledge atoms: 7 recorded
 ```
 
-### What persists in AgentML
+### What persists in Dojo.ml
 
 - **Experiments** in `experiment_store` — full lifecycle with metrics
 - **Knowledge atoms** in `memory_store` — learnings for future tasks

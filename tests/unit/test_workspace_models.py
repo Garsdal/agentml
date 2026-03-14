@@ -1,8 +1,8 @@
 """Tests for Workspace and CodeRun models."""
 
 import pytest
-from agentml.core.domain import Domain, DomainTool, Workspace, WorkspaceSource
-from agentml.core.experiment import CodeRun, ExperimentResult
+from dojo.core.domain import Domain, DomainTool, Workspace, WorkspaceSource
+from dojo.core.experiment import CodeRun, ExperimentResult
 
 
 def test_workspace_defaults():

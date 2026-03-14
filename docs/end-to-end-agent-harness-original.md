@@ -1,6 +1,6 @@
 # End-to-End Agent Harness — Implementation Plan
 
-> **Goal:** Transform AgentML from a stub-driven experiment runner into an autonomous ML research agent powered by the Claude Agents SDK, with well-defined tools, code execution, and a live UI feedback loop.
+> **Goal:** Transform Dojo.ml from a stub-driven experiment runner into an autonomous ML research agent powered by the Claude Agents SDK, with well-defined tools, code execution, and a live UI feedback loop.
 
 ---
 
@@ -8,7 +8,7 @@
 
 1. [Current State Analysis](#1-current-state-analysis)
 2. [Architecture Vision](#2-architecture-vision)
-3. [Phase 1 — AgentML Built-in Tools](#3-phase-1--agentml-built-in-tools)
+3. [Phase 1 — Dojo.ml Built-in Tools](#3-phase-1--dojo-built-in-tools)
 4. [Phase 2 — Code Execution Environment](#4-phase-2--code-execution-environment)
 5. [Phase 3 — Claude Agents SDK Integration](#5-phase-3--claude-agents-sdk-integration)
 6. [Phase 4 — Experiment-Specific Tools & Dynamic Tool Creation](#6-phase-4--experiment-specific-tools--dynamic-tool-creation)
@@ -25,19 +25,19 @@
 
 | Component | Status | Location |
 |---|---|---|
-| **Agent interface** | ABC with `run(task, lab) → TaskResult` | `src/agentml/interfaces/agent.py` |
-| **StubAgent** | Hardcoded mock — no LLM, no tools | `src/agentml/agents/stub_agent.py` |
-| **ToolRuntime interface** | ABC with `register_tool`, `list_tools`, `call_tool` | `src/agentml/interfaces/tool_runtime.py` |
+| **Agent interface** | ABC with `run(task, lab) → TaskResult` | `src/dojo/interfaces/agent.py` |
+| **StubAgent** | Hardcoded mock — no LLM, no tools | `src/dojo/agents/stub_agent.py` |
+| **ToolRuntime interface** | ABC with `register_tool`, `list_tools`, `call_tool` | `src/dojo/interfaces/tool_runtime.py` |
 | **ToolRuntime impl** | **None** — interface exists but no concrete adapter | — |
-| **Sandbox interface** | ABC with `execute(code)`, `install_packages`, `cleanup` | `src/agentml/interfaces/sandbox.py` |
-| **LocalSandbox** | Executes Python via subprocess in tmpdir | `src/agentml/sandbox/local.py` |
-| **LabEnvironment** | DI container — no `tool_runtime` field | `src/agentml/runtime/lab.py` |
-| **ExperimentService** | State machine orchestration (create/run/complete/fail) | `src/agentml/runtime/experiment_service.py` |
-| **TrackingConnector** | File + MLflow + Noop adapters | `src/agentml/tracking/` |
-| **MemoryStore** | Local JSON keyword search | `src/agentml/storage/local_memory.py` |
-| **Config** | `llm.provider` / `llm.model` fields exist but unused | `src/agentml/config/settings.py` |
+| **Sandbox interface** | ABC with `execute(code)`, `install_packages`, `cleanup` | `src/dojo/interfaces/sandbox.py` |
+| **LocalSandbox** | Executes Python via subprocess in tmpdir | `src/dojo/sandbox/local.py` |
+| **LabEnvironment** | DI container — no `tool_runtime` field | `src/dojo/runtime/lab.py` |
+| **ExperimentService** | State machine orchestration (create/run/complete/fail) | `src/dojo/runtime/experiment_service.py` |
+| **TrackingConnector** | File + MLflow + Noop adapters | `src/dojo/tracking/` |
+| **MemoryStore** | Local JSON keyword search | `src/dojo/storage/local_memory.py` |
+| **Config** | `llm.provider` / `llm.model` fields exist but unused | `src/dojo/config/settings.py` |
 | **Frontend** | React dark UI with tasks/experiments/knowledge pages | `frontend/src/` |
-| **API** | REST routes for tasks (sync stub), experiments, knowledge, tracking | `src/agentml/api/routers/` |
+| **API** | REST routes for tasks (sync stub), experiments, knowledge, tracking | `src/dojo/api/routers/` |
 
 ### Key gaps
 
@@ -70,7 +70,7 @@
 │                                                              │
 │  AgentOrchestrator                                           │
 │  ├── Claude Agents SDK (anthropic.Agent)                    │
-│  ├── Built-in Tools (AgentML tools)                         │
+│  ├── Built-in Tools (Dojo.ml tools)                         │
 │  │   ├── create_experiment()                                │
 │  │   ├── run_experiment()                                   │
 │  │   ├── view_results()                                     │
@@ -99,19 +99,19 @@
 
 | Layer | Description | Lifetime | Examples |
 |---|---|---|---|
-| **Built-in tools** | AgentML platform tools the agent always has | Global, static | `create_experiment`, `run_experiment`, `write_knowledge`, `compare_models` |
+| **Built-in tools** | Dojo.ml platform tools the agent always has | Global, static | `create_experiment`, `run_experiment`, `write_knowledge`, `compare_models` |
 | **Code execution tools** | Let the agent write, run, and inspect arbitrary code | Global, static | `execute_code`, `install_packages` |
 | **Experiment-specific tools** | Created dynamically per task/experiment run, either from user hints or agent-authored | Per agent run | `fetch_boston_data`, `evaluate_rmse`, custom data loaders |
 
 ---
 
-## 3. Phase 1 — AgentML Built-in Tools
+## 3. Phase 1 — Dojo.ml Built-in Tools
 
 > **Outcome:** A concrete `ToolRegistry` and a full set of platform tools that wrap `LabEnvironment` services.
 
 ### 3.1 Implement `ToolRegistry` (concrete `ToolRuntime`)
 
-**File:** `src/agentml/tools/registry.py` (new)
+**File:** `src/dojo/tools/registry.py` (new)
 
 ```python
 """Concrete tool runtime — registers and dispatches tools."""
@@ -119,7 +119,7 @@
 from collections.abc import Callable
 from typing import Any
 from dataclasses import dataclass, field
-from agentml.interfaces.tool_runtime import ToolRuntime
+from dojo.interfaces.tool_runtime import ToolRuntime
 
 
 @dataclass
@@ -153,7 +153,7 @@ class ToolRegistry(ToolRuntime):
 
 ### 3.2 Define Built-in Tools
 
-**File:** `src/agentml/tools/builtin.py` (new)
+**File:** `src/dojo/tools/builtin.py` (new)
 
 Each tool is a plain async function that receives `LabEnvironment` via closure. We register them at startup.
 
@@ -170,10 +170,10 @@ Each tool is a plain async function that receives `LabEnvironment` via closure. 
 | `list_experiments` | `task_id?` | Lists experiments from store | `[Experiment]` |
 
 ```python
-# src/agentml/tools/builtin.py
+# src/dojo/tools/builtin.py
 
 def register_builtin_tools(registry: ToolRegistry, lab: LabEnvironment) -> None:
-    """Register all AgentML platform tools."""
+    """Register all Dojo.ml platform tools."""
 
     service = ExperimentService(lab)
 
@@ -200,7 +200,7 @@ def register_builtin_tools(registry: ToolRegistry, lab: LabEnvironment) -> None:
 
 ### 3.3 Wire `ToolRuntime` into `LabEnvironment`
 
-**File:** `src/agentml/runtime/lab.py`
+**File:** `src/dojo/runtime/lab.py`
 
 ```python
 @dataclass
@@ -214,13 +214,13 @@ class LabEnvironment:
     tool_runtime: ToolRuntime  # ← ADD
 ```
 
-**File:** `src/agentml/api/deps.py` — create `ToolRegistry`, call `register_builtin_tools`, pass into `LabEnvironment`.
+**File:** `src/dojo/api/deps.py` — create `ToolRegistry`, call `register_builtin_tools`, pass into `LabEnvironment`.
 
 ### 3.4 Tool JSON Schema Generation
 
 Auto-generate `parameters_schema` from function type hints using `inspect.signature` + `typing.get_type_hints`. This is needed for Claude's tool-use protocol.
 
-**File:** `src/agentml/tools/schema.py` (new)
+**File:** `src/dojo/tools/schema.py` (new)
 
 ```python
 def function_to_json_schema(fn: Callable) -> dict[str, Any]:
@@ -236,7 +236,7 @@ def function_to_json_schema(fn: Callable) -> dict[str, Any]:
 
 ### 4.1 Code Execution Tools
 
-**File:** `src/agentml/tools/code_execution.py` (new)
+**File:** `src/dojo/tools/code_execution.py` (new)
 
 | Tool name | Input | What it does | Returns |
 |---|---|---|---|
@@ -265,13 +265,13 @@ The current `LocalSandbox` creates a fresh tmpdir per execution. For multi-step 
 2. **File I/O** — agent should be able to write data files and read outputs
 3. **Virtual environment isolation** — `install_packages` should use a venv, not system pip
 
-**File:** `src/agentml/sandbox/local.py` — Enhance:
+**File:** `src/dojo/sandbox/local.py` — Enhance:
 
 ```python
 class LocalSandbox(Sandbox):
     def __init__(self, timeout: float = 30.0, workdir: Path | None = None) -> None:
         self.timeout = timeout
-        self._workdir = workdir or Path(tempfile.mkdtemp(prefix="agentml_sandbox_"))
+        self._workdir = workdir or Path(tempfile.mkdtemp(prefix="dojo_sandbox_"))
         self._venv_created = False
 
     async def execute(self, code: str, *, language: str = "python") -> ExecutionResult:
@@ -297,7 +297,7 @@ class LocalSandbox(Sandbox):
 
 ### 4.3 Sandbox interface expansion
 
-**File:** `src/agentml/interfaces/sandbox.py` — Add optional `write_file`, `read_file`, `list_files` methods (with default `NotImplementedError` so existing impls don't break, or add them as a mixin/sub-interface).
+**File:** `src/dojo/interfaces/sandbox.py` — Add optional `write_file`, `read_file`, `list_files` methods (with default `NotImplementedError` so existing impls don't break, or add them as a mixin/sub-interface).
 
 ### 4.4 Future: Modal / Docker sandbox swap
 
@@ -323,7 +323,7 @@ The `anthropic` package includes the Agents SDK (`anthropic.Agent`, tool definit
 
 ### 5.2 `ClaudeAgent` implementation
 
-**File:** `src/agentml/agents/claude_agent.py` (new)
+**File:** `src/dojo/agents/claude_agent.py` (new)
 
 ```python
 """Claude agent — real LLM-powered agent using Anthropic Agents SDK."""
@@ -331,9 +331,9 @@ The `anthropic` package includes the Agents SDK (`anthropic.Agent`, tool definit
 import anthropic
 from anthropic.types import ToolUseBlock
 
-from agentml.interfaces.agent import Agent
-from agentml.core.task import Task, TaskResult
-from agentml.runtime.lab import LabEnvironment
+from dojo.interfaces.agent import Agent
+from dojo.core.task import Task, TaskResult
+from dojo.runtime.lab import LabEnvironment
 
 
 class ClaudeAgent(Agent):
@@ -398,11 +398,11 @@ The system prompt is critical. It must:
 4. Provide the user's task context and constraints
 5. Encourage iterative experimentation
 
-**File:** `src/agentml/agents/prompts.py` (new)
+**File:** `src/dojo/agents/prompts.py` (new)
 
 ```python
 SYSTEM_PROMPT_TEMPLATE = """
-You are an autonomous ML research agent operating within AgentML.
+You are an autonomous ML research agent operating within Dojo.ml.
 
 ## Your capabilities
 You can create experiments, write and execute Python code, track metrics,
@@ -434,25 +434,25 @@ compare models, and record learnings as knowledge atoms.
 
 ### 5.4 Agent selection in config & deps
 
-**File:** `src/agentml/config/settings.py`
+**File:** `src/dojo/config/settings.py`
 
 ```python
 class LLMSettings(BaseSettings):
     provider: str = "stub"          # "stub" | "anthropic"
     model: str = "stub"             # "claude-sonnet-4-20250514", etc.
-    api_key: str = ""               # AGENTML__LLM__API_KEY
+    api_key: str = ""               # DOJO__LLM__API_KEY
     max_tokens: int = 4096
     max_agent_turns: int = 50       # Safety limit on agent loop iterations
 ```
 
-**File:** `src/agentml/api/deps.py` — add `_build_agent(settings) → Agent`:
+**File:** `src/dojo/api/deps.py` — add `_build_agent(settings) → Agent`:
 
 ```python
 def _build_agent(settings: Settings) -> Agent:
     if settings.llm.provider == "anthropic":
-        from agentml.agents.claude_agent import ClaudeAgent
+        from dojo.agents.claude_agent import ClaudeAgent
         return ClaudeAgent(model=settings.llm.model, api_key=settings.llm.api_key)
-    from agentml.agents.stub_agent import StubAgent
+    from dojo.agents.stub_agent import StubAgent
     return StubAgent()
 ```
 
@@ -481,7 +481,7 @@ class LabEnvironment:
 
 Extend the `Task` model and API to accept tool hints:
 
-**File:** `src/agentml/core/task.py`
+**File:** `src/dojo/core/task.py`
 
 ```python
 @dataclass
@@ -578,7 +578,7 @@ The user has provided the following hints for tools you should create:
 
 ### 7.1 AgentRun model
 
-**File:** `src/agentml/core/agent_run.py` (new)
+**File:** `src/dojo/core/agent_run.py` (new)
 
 ```python
 @dataclass
@@ -603,7 +603,7 @@ class AgentEvent:
 
 ### 7.2 Agent run API routes
 
-**File:** `src/agentml/api/routers/agent.py` (new)
+**File:** `src/dojo/api/routers/agent.py` (new)
 
 | Method | Path | Description |
 |---|---|---|
@@ -774,16 +774,16 @@ export interface ToolHint {
 
 | File | Purpose |
 |---|---|
-| `src/agentml/tools/__init__.py` | Package init |
-| `src/agentml/tools/registry.py` | `ToolRegistry` — concrete `ToolRuntime` impl |
-| `src/agentml/tools/schema.py` | JSON Schema generation from function signatures |
-| `src/agentml/tools/builtin.py` | AgentML platform tools (create_experiment, etc.) |
-| `src/agentml/tools/code_execution.py` | Code execution tools (execute_code, etc.) |
-| `src/agentml/tools/dynamic.py` | Dynamic tool creation (create_tool meta-tool) |
-| `src/agentml/agents/claude_agent.py` | Claude Agents SDK-powered agent |
-| `src/agentml/agents/prompts.py` | System prompt templates |
-| `src/agentml/core/agent_run.py` | `AgentRun` and `AgentEvent` domain models |
-| `src/agentml/api/routers/agent.py` | Agent run API routes |
+| `src/dojo/tools/__init__.py` | Package init |
+| `src/dojo/tools/registry.py` | `ToolRegistry` — concrete `ToolRuntime` impl |
+| `src/dojo/tools/schema.py` | JSON Schema generation from function signatures |
+| `src/dojo/tools/builtin.py` | Dojo.ml platform tools (create_experiment, etc.) |
+| `src/dojo/tools/code_execution.py` | Code execution tools (execute_code, etc.) |
+| `src/dojo/tools/dynamic.py` | Dynamic tool creation (create_tool meta-tool) |
+| `src/dojo/agents/claude_agent.py` | Claude Agents SDK-powered agent |
+| `src/dojo/agents/prompts.py` | System prompt templates |
+| `src/dojo/core/agent_run.py` | `AgentRun` and `AgentEvent` domain models |
+| `src/dojo/api/routers/agent.py` | Agent run API routes |
 | `frontend/src/pages/agent.tsx` | Agent page |
 | `frontend/src/hooks/use-agent-runs.ts` | Agent runs SWR hook |
 | `frontend/src/hooks/use-agent-events.ts` | SSE event stream hook |
@@ -799,14 +799,14 @@ export interface ToolHint {
 
 | File | Change |
 |---|---|
-| `src/agentml/runtime/lab.py` | Add `tool_runtime: ToolRuntime` and `agent: Agent` fields |
-| `src/agentml/api/deps.py` | Build `ToolRegistry`, register tools, build agent, wire everything |
-| `src/agentml/api/app.py` | Include `agent` router |
-| `src/agentml/config/settings.py` | Add `max_agent_turns`, enhance `LLMSettings` |
-| `src/agentml/sandbox/local.py` | Persistent workdir, file I/O, venv support |
-| `src/agentml/interfaces/sandbox.py` | Add `write_file`, `read_file`, `list_files` optional methods |
-| `src/agentml/core/task.py` | Add `ToolHint` dataclass and `tool_hints` field to `Task` |
-| `src/agentml/api/routers/tasks.py` | Refactor to use agent from lab instead of hardcoded `StubAgent` |
+| `src/dojo/runtime/lab.py` | Add `tool_runtime: ToolRuntime` and `agent: Agent` fields |
+| `src/dojo/api/deps.py` | Build `ToolRegistry`, register tools, build agent, wire everything |
+| `src/dojo/api/app.py` | Include `agent` router |
+| `src/dojo/config/settings.py` | Add `max_agent_turns`, enhance `LLMSettings` |
+| `src/dojo/sandbox/local.py` | Persistent workdir, file I/O, venv support |
+| `src/dojo/interfaces/sandbox.py` | Add `write_file`, `read_file`, `list_files` optional methods |
+| `src/dojo/core/task.py` | Add `ToolHint` dataclass and `tool_hints` field to `Task` |
+| `src/dojo/api/routers/tasks.py` | Refactor to use agent from lab instead of hardcoded `StubAgent` |
 | `pyproject.toml` | Add `anthropic` dependency, `sse-starlette` for SSE |
 | `frontend/src/types.ts` | Add `AgentRun`, `AgentEvent`, `ToolHint` types |
 | `frontend/src/App.tsx` | Add agent route |
@@ -883,11 +883,11 @@ anthropic = ["anthropic>=0.80"]  # Already listed
 ### Config defaults (zero-config for stub mode)
 
 ```yaml
-# .agentml/config.yaml (example for real Claude usage)
+# .dojo/config.yaml (example for real Claude usage)
 llm:
   provider: anthropic
   model: claude-sonnet-4-20250514
-  api_key: ${ANTHROPIC_API_KEY}  # or set AGENTML__LLM__API_KEY env var
+  api_key: ${ANTHROPIC_API_KEY}  # or set DOJO__LLM__API_KEY env var
   max_agent_turns: 50
 ```
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentml.core.state_machine import (
+from dojo.core.state_machine import (
     ExperimentState,
     InvalidTransitionError,
     transition,
