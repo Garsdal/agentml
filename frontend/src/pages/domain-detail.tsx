@@ -27,7 +27,10 @@ import {
   Brain,
   BarChart3,
   Wrench,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
+import { setupWorkspace } from "@/hooks/use-workspace";
 
 export default function DomainDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -138,6 +141,30 @@ export default function DomainDetailPage() {
         ))}
       </div>
 
+      {/* Workspace status row */}
+      {domain.workspace && (
+        <div className="flex items-center gap-3 flex-wrap px-1">
+          <span className="text-xs text-grey font-medium">Workspace</span>
+          {domain.workspace.ready ? (
+            <span className="inline-flex items-center gap-1 bg-muted-teal/20 text-muted-teal rounded-full text-xs px-2.5 py-0.5 font-medium">
+              <CheckCircle2 className="h-3 w-3" />
+              ready
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 bg-wheat/40 text-soft-fawn rounded-full text-xs px-2.5 py-0.5 font-medium">
+              <AlertCircle className="h-3 w-3" />
+              not ready
+            </span>
+          )}
+          <span className="font-mono text-xs text-grey truncate max-w-[280px]">
+            {domain.workspace.path}
+          </span>
+          {!domain.workspace.ready && (
+            <SetupWorkspaceButton domainId={domain.id} onDone={() => mutate()} />
+          )}
+        </div>
+      )}
+
       {/* Tabbed content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
@@ -204,9 +231,42 @@ export default function DomainDetailPage() {
         </TabsContent>
 
         <TabsContent value="tools">
-          <ToolsSection domainId={domain.id} tools={domain.tools} onMutate={() => mutate()} />
+          <ToolsSection domainId={domain.id} tools={domain.tools} hasWorkspace={domain.workspace !== null} onMutate={() => mutate()} />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function SetupWorkspaceButton({
+  domainId,
+  onDone,
+}: {
+  domainId: string;
+  onDone: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSetup = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await setupWorkspace(domainId);
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Setup failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button size="sm" variant="outline" onClick={handleSetup} disabled={loading}>
+        {loading ? "Setting up…" : "Set up"}
+      </Button>
+      {error && <span className="text-xs text-danger">{error}</span>}
     </div>
   );
 }
